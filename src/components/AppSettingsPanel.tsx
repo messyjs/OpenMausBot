@@ -1,11 +1,11 @@
 // App-level settings, in the right-side slot: who you are + credentials
 // shared by all bots. Per-bot settings (name, persona, model, computer)
-// live in SettingsPanel; contextual Box-token entry stays in ComputerPanel.
-import { X } from "lucide-react";
 import { useEffect, useState } from "react";
+import { X, Sparkles } from "lucide-react";
 import { useStore } from "@/state/store";
 import { ApiKeyRow } from "./ApiKeys";
 import { DeviceManager } from "./DeviceManager";
+import { EngineBuilder } from "./EngineBuilder";
 
 function ProfileFields() {
   const { state, dispatch } = useStore();
@@ -46,6 +46,7 @@ function ProfileFields() {
 
 export function AppSettingsPanel() {
   const { dispatch } = useStore();
+  const [showEngineBuilder, setShowEngineBuilder] = useState(false);
 
   return (
     <aside className="animate-panel-in flex h-full w-[400px] shrink-0 flex-col border-l border-hairline/40 bg-panel">
@@ -110,6 +111,15 @@ export function AppSettingsPanel() {
           </div>
         </div>
 
+        {/* Engine Builder */}
+        <div className="mt-4 rounded-xl bg-card p-4">
+          <div className="text-[15px] font-medium text-ink">Bot Engine Builder</div>
+          <div className="mt-0.5 text-[13px] text-ink-secondary">Build a custom engine from any subject. Scrapes Wikipedia, optionally enhances with your Ollama models.</div>
+          <button onClick={() => setShowEngineBuilder(true)} className="mt-3 flex items-center gap-2 rounded-lg bg-accent px-4 py-2 text-[13px] font-medium text-white hover:bg-accent/90">
+            <Sparkles size={14} /> Build Engine
+          </button>
+        </div>
+
         <DeviceManager />
 
         <div className="mt-4 rounded-xl bg-card p-4">
@@ -129,6 +139,7 @@ export function AppSettingsPanel() {
           </div>
         </div>
       </div>
+      {showEngineBuilder && <EngineBuilder onClose={() => setShowEngineBuilder(false)} />}
     </aside>
   );
 }
