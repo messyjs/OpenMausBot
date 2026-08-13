@@ -39,7 +39,9 @@ export interface AppConfig {
   ollama?: OllamaEndpoint;
   /** Workstation Ollama endpoint (LAN remote) */
   ollamaWorkstation?: OllamaEndpoint;
-  /** Ollama Cloud endpoint (api.ollama.com with API key) */
+  /** MJ Laptop Ollama endpoint (RTX 4080, via Cloudflare tunnel) */
+  ollamaMjLaptop?: OllamaEndpoint;
+  /** Ollama Cloud API endpoint (api.ollama.com with API key for hosted models) */
   ollamaCloud?: OllamaEndpoint;
   devices?: NetworkDevice[];
   profile?: { name?: string; email?: string };
@@ -68,6 +70,7 @@ export function loadConfig(): AppConfig {
   cfg.box = { token: process.env.BOX_TOKEN, ...cfg.box };
   cfg.ollama = { url: process.env.OLLAMA_URL, ...cfg.ollama };
   cfg.ollamaWorkstation = { ...cfg.ollamaWorkstation };
+  cfg.ollamaMjLaptop = { ...cfg.ollamaMjLaptop };
   cfg.ollamaCloud = { apiKey: process.env.OLLAMA_API_KEY_2, ...cfg.ollamaCloud };
   return cfg;
 }
@@ -76,7 +79,7 @@ export function saveConfig(patch: Partial<AppConfig>): void {
   const p = join(DATA_DIR, "config.json");
   let disk: Record<string, unknown> = {};
   try { disk = JSON.parse(readFileSync(p, "utf8")); } catch {}
-  for (const key of ["xai", "composio", "box", "ollama", "ollamaWorkstation", "ollamaCloud", "profile", "devices"] as const) {
+  for (const key of ["xai", "composio", "box", "ollama", "ollamaWorkstation", "ollamaMjLaptop", "ollamaCloud", "profile", "devices"] as const) {
     if (patch[key] !== undefined) {
       if (Array.isArray(patch[key])) {
         disk[key] = patch[key];
@@ -107,6 +110,11 @@ export function instanceConfigs(cfg: AppConfig): InstanceConfigMap {
             driver: "ollama",
             displayName: "Ollama (Workstation)",
             config: { url: cfg.ollamaWorkstation?.url ?? "http://<workstation-ip>:11434" },
+          },
+          ollamaMjLaptop: {
+            driver: "ollama",
+            displayName: "Ollama (MJ Laptop)",
+            config: { url: cfg.ollamaMjLaptop?.url ?? "http://<mj-laptop-ip>:11434" },
           },
           ollamaCloud: {
             driver: "ollama",

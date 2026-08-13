@@ -477,6 +477,7 @@ function configStatus() {
         box: { configured: Boolean(cfg.box?.token) },
         ollama: { configured: true, url: cfg.ollama?.url ?? "http://127.0.0.1:11434" },
         ollamaWorkstation: { configured: true, url: cfg.ollamaWorkstation?.url ?? "http://<workstation-ip>:11434" },
+        ollamaMjLaptop: { configured: true, url: cfg.ollamaMjLaptop?.url ?? "http://<mj-laptop-ip>:11434" },
         ollamaCloud: { configured: Boolean(cfg.ollamaCloud?.apiKey), url: cfg.ollamaCloud?.url ?? "https://api.ollama.com" },
         // not a secret — the sidebar shows it
         profile: { name: cfg.profile?.name ?? "", email: cfg.profile?.email ?? "" },
@@ -720,7 +721,7 @@ const server = createServer(async (req, res) => {
         if ((method === "PUT" || method === "PATCH") && path === "/api/config") {
             const body = await readBody(req);
             const patch = {};
-            for (const key of ["xai", "composio", "box", "ollama", "ollamaWorkstation", "ollamaCloud", "profile"]) {
+            for (const key of ["xai", "composio", "box", "ollama", "ollamaWorkstation", "ollamaMjLaptop", "ollamaCloud", "profile"]) {
                 if (body[key] && typeof body[key] === "object")
                     patch[key] = body[key];
             }

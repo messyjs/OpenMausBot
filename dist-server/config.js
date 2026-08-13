@@ -32,6 +32,7 @@ export function loadConfig() {
     cfg.box = { token: process.env.BOX_TOKEN, ...cfg.box };
     cfg.ollama = { url: process.env.OLLAMA_URL, ...cfg.ollama };
     cfg.ollamaWorkstation = { ...cfg.ollamaWorkstation };
+    cfg.ollamaMjLaptop = { ...cfg.ollamaMjLaptop };
     cfg.ollamaCloud = { apiKey: process.env.OLLAMA_API_KEY_2, ...cfg.ollamaCloud };
     return cfg;
 }
@@ -42,7 +43,7 @@ export function saveConfig(patch) {
         disk = JSON.parse(readFileSync(p, "utf8"));
     }
     catch { }
-    for (const key of ["xai", "composio", "box", "ollama", "ollamaWorkstation", "ollamaCloud", "profile", "devices"]) {
+    for (const key of ["xai", "composio", "box", "ollama", "ollamaWorkstation", "ollamaMjLaptop", "ollamaCloud", "profile", "devices"]) {
         if (patch[key] !== undefined) {
             if (Array.isArray(patch[key])) {
                 disk[key] = patch[key];
@@ -72,6 +73,11 @@ export function instanceConfigs(cfg) {
                 driver: "ollama",
                 displayName: "Ollama (Workstation)",
                 config: { url: cfg.ollamaWorkstation?.url ?? "http://<workstation-ip>:11434" },
+            },
+            ollamaMjLaptop: {
+                driver: "ollama",
+                displayName: "Ollama (MJ Laptop)",
+                config: { url: cfg.ollamaMjLaptop?.url ?? "http://<mj-laptop-ip>:11434" },
             },
             ollamaCloud: {
                 driver: "ollama",
