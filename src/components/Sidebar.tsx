@@ -204,7 +204,9 @@ function BotContextMenu({ menu, onClose }: { menu: MenuState; onClose: () => voi
       {item(bot.pinned ? <PinOff size={16} className="text-ink-secondary" /> : <Pin size={16} className="text-ink-secondary" />, bot.pinned ? "Unpin" : "Pin", () => dispatch({ type: "updateBot", botId: bot.id, patch: { pinned: !bot.pinned } }))}
       {item(<Settings size={16} className="text-ink-secondary" />, "Settings", () => dispatch({ type: "toggleSettings", open: true }), { hint: "Open bot settings" })}
       {item(<Users size={16} className="text-ink-secondary" />, "Set as Director", () => dispatch({ type: "setDirector", botId: bot.id }))}
-      {item(<Plus size={16} className="text-ink-secondary" />, "New Session", () => dispatch({ type: "newSession", botId: bot.id }))}
+      {/* New Session: always available in single mode, only for director in director/group/fusion mode */}
+      {(state.chatMode === "single" || (state.bots.find((b) => b.id === state.directorId) || state.bots.find((b) => b.name === "Towelie" || /director/i.test(b.title ?? "")))?.id === bot.id) &&
+        item(<Plus size={16} className="text-ink-secondary" />, "New Session", () => dispatch({ type: "newSession", botId: bot.id }))}
       <div className="mx-2 my-1 border-t border-hairline/40" />
       {item(<Trash2 size={16} />, "Delete", () => dispatch({ type: "deleteBot", botId: bot.id }), { danger: true })}
     </div>
