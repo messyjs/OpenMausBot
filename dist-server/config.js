@@ -1,7 +1,7 @@
 // Config + data dirs. One file, ~/.openmausbot/config.json, env fallbacks:
 //   { "xai": {"key":"xai-…"}, "composio": {"key":"ck_…"}, "box": {"token":"…"},
 //     "ollama": {"url":"http://127.0.0.1:11434"},
-//     "ollamaWorkstation": {"url":"http://192.168.68.70:11434"},
+//     "ollamaWorkstation": {"url":"http://<workstation-ip>:11434"},
 //     "ollamaCloud": {"url":"https://api.ollama.com", "apiKey":"…"},
 //     "instances": { "<instanceId>": {"driver":"ollama", …} } }
 import { readFileSync, writeFileSync, mkdirSync, existsSync, renameSync } from "node:fs";
@@ -42,9 +42,14 @@ export function saveConfig(patch) {
         disk = JSON.parse(readFileSync(p, "utf8"));
     }
     catch { }
-    for (const key of ["xai", "composio", "box", "ollama", "ollamaWorkstation", "ollamaCloud", "profile"]) {
-        if (patch[key] && typeof patch[key] === "object") {
-            disk[key] = { ...disk[key], ...patch[key] };
+    for (const key of ["xai", "composio", "box", "ollama", "ollamaWorkstation", "ollamaCloud", "profile", "devices"]) {
+        if (patch[key] !== undefined) {
+            if (Array.isArray(patch[key])) {
+                disk[key] = patch[key];
+            }
+            else if (typeof patch[key] === "object" && patch[key] !== null) {
+                disk[key] = { ...disk[key], ...patch[key] };
+            }
         }
     }
     mkdirSync(DATA_DIR, { recursive: true });
@@ -66,7 +71,7 @@ export function instanceConfigs(cfg) {
             ollamaWorkstation: {
                 driver: "ollama",
                 displayName: "Ollama (Workstation)",
-                config: { url: cfg.ollamaWorkstation?.url ?? "http://192.168.68.70:11434" },
+                config: { url: cfg.ollamaWorkstation?.url ?? "http://<workstation-ip>:11434" },
             },
             ollamaCloud: {
                 driver: "ollama",

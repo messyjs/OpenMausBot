@@ -9,6 +9,7 @@ import { dirname, extname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 
 import * as box from "./box.ts";
+import * as devices from "./devices.ts";
 import * as composio from "./composio.ts";
 import { ensureDirs, instanceConfigs, loadConfig, saveConfig, EVENTS_DIR, NATIVE_DIR } from "./config.ts";
 import type { RuntimeEvent } from "./contracts.ts";
@@ -551,7 +552,7 @@ const server = createServer(async (req, res) => {
     if (m && method === "PATCH") {
       const body = await readBody(req);
       const patch: Record<string, unknown> = {};
-      for (const key of ["name", "title", "description", "notifications", "modelSelection", "unread", "computer", "color", "mascotExpression", "pinned", "hidden"] as const) {
+      for (const key of ["name", "title", "description", "notifications", "modelSelection", "unread", "computer", "deviceId", "color", "mascotExpression", "pinned", "hidden"] as const) {
         if (body[key] !== undefined) patch[key] = body[key];
       }
       const bot = store.patchBot(m[1], patch);
@@ -694,6 +695,60 @@ const server = createServer(async (req, res) => {
         }
         case "screenshot":
           return json(res, 200, await box.screenshotBox(cfg, botId));
+      }
+    }
+
+
+    // ── network devices (SSH/ADB) ──
+    if (method === "GET" && path === "/api/devices") {
+      return json(res, 200, { devices: devices.listDevices(cfg) });
+    }
+    if (method === "POST" && path === "/api/devices") {
+      const body = await readBody(req);
+      const dev: any = {
+        id: body.id || devices.newDeviceId(),
+        name: String(body.name || "Unnamed Device"),
+        type: body.type === "adb" ? "adb" : "ssh",
+        host: body.host || undefined,
+        port: body.port ? Number(body.port) : undefined,
+        username: body.username || undefined,
+        password: body.password || undefined,
+        keyPath: body.keyPath || undefined,
+        adbDeviceId: body.adbDeviceId || undefined,
+        display: body.display || undefined,
+      };
+      const existing = cfg.devices || [];
+      const idx = existing.findIndex((d) => d.id === dev.id);
+      if (idx >= 0) existing[idx] = dev;
+      else existing.push(dev);
+      saveConfig({ devices: existing });
+      Object.assign(cfg, loadConfig());
+      return json(res, 200, { device: devices.sanitizeDevice(dev) });
+    }
+    m = path.match(/^\/api\/devices\/([\w-]+)$/);
+    if (m && method === "DELETE") {
+      const existing = cfg.devices || [];
+      const filtered = existing.filter((d) => d.id !== m![1]);
+      saveConfig({ devices: filtered });
+      Object.assign(cfg, loadConfig());
+      return json(res, 200, { ok: true });
+    }
+    m = path.match(/^\/api\/devices\/([\w-]+)\/test$/);
+    if (m && method === "POST") {
+      const dev = devices.getDevice(cfg, m![1]);
+      if (!dev) return json(res, 404, { error: "no such device" });
+      const result = await devices.testDevice(dev);
+      return json(res, 200, result);
+    }
+    m = path.match(/^\/api\/devices\/([\w-]+)\/screenshot$/);
+    if (m && method === "POST") {
+      const dev = devices.getDevice(cfg, m![1]);
+      if (!dev) return json(res, 404, { error: "no such device" });
+      try {
+        const frame = await devices.deviceScreenshot(dev);
+        return json(res, 200, frame);
+      } catch (e) {
+        return json(res, 500, { error: e instanceof Error ? e.message : String(e) });
       }
     }
 

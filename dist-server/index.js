@@ -8,6 +8,7 @@ import { homedir } from "node:os";
 import { dirname, extname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import * as box from "./box.js";
+import * as devices from "./devices.js";
 import * as composio from "./composio.js";
 import { ensureDirs, instanceConfigs, loadConfig, saveConfig, EVENTS_DIR, NATIVE_DIR } from "./config.js";
 import { BUILT_IN_DRIVERS } from "./drivers/builtIn.js";
@@ -405,7 +406,7 @@ function configStatus() {
         composio: { configured: Boolean(cfg.composio?.key), apiKeyConfigured: Boolean(cfg.composio?.apiKey) },
         box: { configured: Boolean(cfg.box?.token) },
         ollama: { configured: true, url: cfg.ollama?.url ?? "http://127.0.0.1:11434" },
-        ollamaWorkstation: { configured: true, url: cfg.ollamaWorkstation?.url ?? "http://192.168.68.70:11434" },
+        ollamaWorkstation: { configured: true, url: cfg.ollamaWorkstation?.url ?? "http://<workstation-ip>:11434" },
         ollamaCloud: { configured: Boolean(cfg.ollamaCloud?.apiKey), url: cfg.ollamaCloud?.url ?? "https://api.ollama.com" },
         // not a secret — the sidebar shows it
         profile: { name: cfg.profile?.name ?? "", email: cfg.profile?.email ?? "" },
@@ -534,7 +535,7 @@ const server = createServer(async (req, res) => {
         if (m && method === "PATCH") {
             const body = await readBody(req);
             const patch = {};
-            for (const key of ["name", "title", "description", "notifications", "modelSelection", "unread", "computer", "color", "mascotExpression", "pinned", "hidden"]) {
+            for (const key of ["name", "title", "description", "notifications", "modelSelection", "unread", "computer", "deviceId", "color", "mascotExpression", "pinned", "hidden"]) {
                 if (body[key] !== undefined)
                     patch[key] = body[key];
             }
@@ -689,6 +690,63 @@ const server = createServer(async (req, res) => {
                 }
                 case "screenshot":
                     return json(res, 200, await box.screenshotBox(cfg, botId));
+            }
+        }
+        // ── network devices (SSH/ADB) ──
+        if (method === "GET" && path === "/api/devices") {
+            return json(res, 200, { devices: devices.listDevices(cfg) });
+        }
+        if (method === "POST" && path === "/api/devices") {
+            const body = await readBody(req);
+            const dev = {
+                id: body.id || devices.newDeviceId(),
+                name: String(body.name || "Unnamed Device"),
+                type: body.type === "adb" ? "adb" : "ssh",
+                host: body.host || undefined,
+                port: body.port ? Number(body.port) : undefined,
+                username: body.username || undefined,
+                password: body.password || undefined,
+                keyPath: body.keyPath || undefined,
+                adbDeviceId: body.adbDeviceId || undefined,
+                display: body.display || undefined,
+            };
+            const existing = cfg.devices || [];
+            const idx = existing.findIndex((d) => d.id === dev.id);
+            if (idx >= 0)
+                existing[idx] = dev;
+            else
+                existing.push(dev);
+            saveConfig({ devices: existing });
+            Object.assign(cfg, loadConfig());
+            return json(res, 200, { device: devices.sanitizeDevice(dev) });
+        }
+        m = path.match(/^\/api\/devices\/([\w-]+)$/);
+        if (m && method === "DELETE") {
+            const existing = cfg.devices || [];
+            const filtered = existing.filter((d) => d.id !== m[1]);
+            saveConfig({ devices: filtered });
+            Object.assign(cfg, loadConfig());
+            return json(res, 200, { ok: true });
+        }
+        m = path.match(/^\/api\/devices\/([\w-]+)\/test$/);
+        if (m && method === "POST") {
+            const dev = devices.getDevice(cfg, m[1]);
+            if (!dev)
+                return json(res, 404, { error: "no such device" });
+            const result = await devices.testDevice(dev);
+            return json(res, 200, result);
+        }
+        m = path.match(/^\/api\/devices\/([\w-]+)\/screenshot$/);
+        if (m && method === "POST") {
+            const dev = devices.getDevice(cfg, m[1]);
+            if (!dev)
+                return json(res, 404, { error: "no such device" });
+            try {
+                const frame = await devices.deviceScreenshot(dev);
+                return json(res, 200, frame);
+            }
+            catch (e) {
+                return json(res, 500, { error: e instanceof Error ? e.message : String(e) });
             }
         }
         // packaged app: the server serves the built UI too (window → :8799 for

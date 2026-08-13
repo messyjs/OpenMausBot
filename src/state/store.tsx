@@ -57,7 +57,9 @@ export interface Bot {
   busy?: boolean;
   modelSelection: ModelSelection;
   /** Where this bot's computer runs; unset = auto (cloud box if one exists, else local). */
-  computer?: "cloud" | "local" | "off";
+  computer?: "cloud" | "local" | "network" | "off";
+  /** When computer is "network", which device to use. */
+  deviceId?: string;
   pinned?: boolean;
   hidden?: boolean;
   messages: Message[];
@@ -73,6 +75,18 @@ export interface ConfigStatus {
   ollamaCloud: { configured: boolean; url?: string };
   /** who's using the app — collected in onboarding, shown in the sidebar */
   profile?: { name: string; email: string };
+}
+
+/** A network device (SSH/ADB) from GET /api/devices — no credentials. */
+export interface DeviceInfo {
+  id: string;
+  name: string;
+  type: "ssh" | "adb";
+  host?: string;
+  port?: number;
+  username?: string;
+  adbDeviceId?: string;
+  connected?: boolean;
 }
 
 /** One row of GET /api/instances — the model picker's data. */
@@ -93,6 +107,7 @@ interface AppState {
   bots: Bot[];
   instances: InstanceInfo[];
   config: ConfigStatus | null;
+  devices: DeviceInfo[];
   selectedId: string;
   settingsOpen: boolean;
   pluginsOpen: boolean;
@@ -117,6 +132,7 @@ type Action =
   | { type: "hydrate"; bots: Bot[] }
   | { type: "instances"; instances: InstanceInfo[] }
   | { type: "configStatus"; config: ConfigStatus }
+  | { type: "devices"; devices: DeviceInfo[] }
   | { type: "select"; id: string }
   | { type: "send"; botId: string; text: string }
   | { type: "answerCard"; botId: string; messageId: string; answer: string }
@@ -148,7 +164,7 @@ type Action =
       patch: Partial<
         Pick<
           Bot,
-          "name" | "title" | "description" | "notifications" | "computer" | "color" | "mascotExpression" | "pinned" | "hidden"
+          "name" | "title" | "description" | "notifications" | "computer" | "deviceId" | "color" | "mascotExpression" | "pinned" | "hidden"
         >
       >;
     };
@@ -364,6 +380,8 @@ function reducer(state: AppState, action: Action): AppState {
     case "duplicateBot":
     case "interrupt":
       return state;
+    default:
+      return state;
   }
 }
 
@@ -371,6 +389,7 @@ const initialState: AppState = {
   bots: [],
   instances: [],
   config: null,
+  devices: [],
   selectedId: "",
   settingsOpen: false,
   pluginsOpen: false,

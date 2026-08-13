@@ -5,6 +5,7 @@ import { X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useStore } from "@/state/store";
 import { ApiKeyRow } from "./ApiKeys";
+import { DeviceManager } from "./DeviceManager";
 
 function ProfileFields() {
   const { state, dispatch } = useStore();
@@ -98,6 +99,8 @@ export function AppSettingsPanel() {
             <ApiKeyRow section="ollamaCloudApiKey" label="Cloud API key" placeholder="Your Ollama Cloud API key" />
           </div>
         </div>
+
+        <DeviceManager />
 
         <div className="mt-4 rounded-xl bg-card p-4">
           <div className="text-[15px] font-medium text-ink">Connections</div>

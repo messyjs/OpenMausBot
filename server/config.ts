@@ -15,6 +15,22 @@ export interface OllamaEndpoint {
   apiKey?: string;
 }
 
+export interface NetworkDevice {
+  id: string;
+  name: string;
+  type: "ssh" | "adb";
+  // SSH fields
+  host?: string;
+  port?: number;
+  username?: string;
+  password?: string;
+  keyPath?: string;
+  // ADB fields
+  adbDeviceId?: string;
+  // Optional: display info for screen capture
+  display?: string;
+}
+
 export interface AppConfig {
   xai?: { key?: string; url?: string };
   composio?: { key?: string; apiKey?: string; url?: string };
@@ -25,6 +41,7 @@ export interface AppConfig {
   ollamaWorkstation?: OllamaEndpoint;
   /** Ollama Cloud endpoint (api.ollama.com with API key) */
   ollamaCloud?: OllamaEndpoint;
+  devices?: NetworkDevice[];
   profile?: { name?: string; email?: string };
   instances?: InstanceConfigMap;
 }
@@ -59,9 +76,13 @@ export function saveConfig(patch: Partial<AppConfig>): void {
   const p = join(DATA_DIR, "config.json");
   let disk: Record<string, unknown> = {};
   try { disk = JSON.parse(readFileSync(p, "utf8")); } catch {}
-  for (const key of ["xai", "composio", "box", "ollama", "ollamaWorkstation", "ollamaCloud", "profile"] as const) {
-    if (patch[key] && typeof patch[key] === "object") {
-      disk[key] = { ...(disk[key] as object), ...patch[key] };
+  for (const key of ["xai", "composio", "box", "ollama", "ollamaWorkstation", "ollamaCloud", "profile", "devices"] as const) {
+    if (patch[key] !== undefined) {
+      if (Array.isArray(patch[key])) {
+        disk[key] = patch[key];
+      } else if (typeof patch[key] === "object" && patch[key] !== null) {
+        disk[key] = { ...(disk[key] as object), ...patch[key] };
+      }
     }
   }
   mkdirSync(DATA_DIR, { recursive: true });

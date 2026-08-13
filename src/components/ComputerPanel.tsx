@@ -34,6 +34,7 @@ type Phase =
   | "local"
   | "local-unavailable"
   | "off"
+  | "network"
   | "error";
 
 export function ComputerPanel({ bot }: { bot: Bot }) {
@@ -172,7 +173,7 @@ export function ComputerPanel({ bot }: { bot: Bot }) {
       .finally(() => setPending(null));
   };
 
-  const emptyState: Record<Exclude<Phase, "ready" | "local">, string> = {
+  const emptyState: Record<Exclude<Phase, "ready" | "local" | "network">, string> = {
     checking: "Checking…",
     starting: "Starting your bot's computer…",
     unconfigured: "No cloud computer configured",
@@ -226,7 +227,9 @@ export function ComputerPanel({ bot }: { bot: Bot }) {
                     ? localMisses >= 3
                       ? "No frames yet — the preview needs Screen Recording permission. After granting, relaunch the app (macOS applies it on next launch)."
                       : "Capturing this computer's screen…"
-                    : emptyState[phase]}
+                    : phase === "network"
+                      ? "Pick a network device below"
+                      : emptyState[phase]}
               </span>
               {phase === "local" && localMisses >= 3 && (
                 <button
@@ -281,6 +284,36 @@ export function ComputerPanel({ bot }: { bot: Bot }) {
                 Sleep
               </button>
             )}
+          </div>
+        )}
+
+        {/* Network device picker */}
+        {phase === "network" && (
+          <div className="mt-3 rounded-xl bg-card p-4">
+            <div className="text-[15px] font-medium text-ink">Network Device</div>
+            <div className="mt-0.5 text-[13px] text-ink-secondary">Choose a device on your network.</div>
+            <div className="mt-3 flex flex-col gap-2">
+              {state.devices.length === 0 && (
+                <div className="text-[13px] text-ink-secondary py-2 text-center">
+                  No devices configured. Add one in App Settings.
+                </div>
+              )}
+              {state.devices.map((dev) => (
+                <button
+                  key={dev.id}
+                  onClick={() => dispatch({ type: "updateBot", botId: bot.id, patch: { deviceId: dev.id } })}
+                  className={cn(
+                    "flex items-center gap-2 rounded-lg px-3 py-2 text-[13px]",
+                    bot.deviceId === dev.id ? "bg-raised text-ink" : "bg-inset text-ink-secondary hover:bg-raised/60",
+                  )}
+                >
+                  <span className={cn("size-1.5 rounded-full", dev.connected ? "bg-success" : "bg-ink-secondary/40")} />
+                  <span>{dev.name}</span>
+                  <span className="text-[11px] text-ink-secondary/70">{dev.type.toUpperCase()}</span>
+                  {dev.host && <span className="text-[11px] text-ink-secondary/50">{dev.host}</span>}
+                </button>
+              ))}
+            </div>
           </div>
         )}
 
