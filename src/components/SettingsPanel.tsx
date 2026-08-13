@@ -125,9 +125,7 @@ export function SettingsPanel({ bot }: { bot: Bot }) {
               </div>
             </div>
           </div>
-          {(bot.name === "Towelie" || /director/i.test(bot.title ?? "")) && (
-            <Toggle on={bot.towelieBehavior !== false} onClick={() => patch({ towelieBehavior: bot.towelieBehavior === false ? true : false })} label="Towelie Behavior" desc="Dopey personality, random towel reminders, wanna get high — the full South Park act" />
-          )}
+          <Toggle on={bot.towelieBehavior === true} onClick={() => patch({ towelieBehavior: !bot.towelieBehavior })} label="Towelie Behavior" desc="Dopey stoner personality, random towel reminders, wanna get high, forgets jokes mid-telling. OFF by default — enable to activate the South Park act." />
           <Toggle on={!!bot.pythonEnabled} onClick={() => patch({ pythonEnabled: !bot.pythonEnabled })} label="Python Runtime" desc="Bot can execute Python code in a sandbox" />
           <Toggle on={!!bot.compressedComms} onClick={() => patch({ compressedComms: !bot.compressedComms })} label="Secret Language" desc="Compressed inter-bot communication to save tokens" />
           <Toggle on={!!bot.notifications} onClick={() => patch({ notifications: !bot.notifications })} label="Notifications" desc="Get notified when this agent finishes or needs input" />

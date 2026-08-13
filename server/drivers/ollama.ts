@@ -219,7 +219,7 @@ export const OllamaDriver: ProviderDriver<OllamaConfig> = {
       if (round === 0 && toolDefs && toolDefs.length > 0) {
         const tl = toolDefs.map((t: any) => "- "+t.function.name+": "+t.function.description).join(String.fromCharCode(10));
         const ex = tcS+String.fromCharCode(10)+JSON.stringify({name:"execute_command",arguments:{command:"notepad.exe"}})+String.fromCharCode(10)+tcE;
-        const ti = String.fromCharCode(10)+String.fromCharCode(10)+"You have access to these tools:"+String.fromCharCode(10)+tl+String.fromCharCode(10)+String.fromCharCode(10)+"To use a tool, output a tool_call block in this format:"+String.fromCharCode(10)+ex+String.fromCharCode(10)+"You can make multiple tool calls. After tool results are provided, continue based on the results.";
+        const ti = String.fromCharCode(10)+String.fromCharCode(10)+"You have access to these tools:"+String.fromCharCode(10)+tl+String.fromCharCode(10)+String.fromCharCode(10)+"To use a tool, output a tool_call block in this format:"+String.fromCharCode(10)+ex+String.fromCharCode(10)+"When the user asks you to DO something (open a file, run a command, list files, write code), you MUST use a tool_call block to actually do it. Do NOT just describe what you would do or write the result in chat. Always use the tools to take real action. You can make multiple tool calls. After tool results come back, summarize what happened.";
         roundMsgs = [{ role: "system", content: (turn.system||"")+ti }, ...convMsgs.slice(1)];
       }
       const result = await complete(roundMsgs, model, {
