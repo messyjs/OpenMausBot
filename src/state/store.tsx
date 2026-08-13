@@ -129,7 +129,14 @@ interface AppState {
   provisioning: Record<string, boolean>;
   connected: boolean;
   /** Director mode: messages route to Towelie who delegates to specialists */
-  directorMode: boolean;
+  /** Chat mode: "single" (direct with one bot), "director" (director routes), "group" (director picks bots) */
+  chatMode: "single" | "director" | "group";
+  /** Which bot is the director (defaults to Towelie) */
+  directorId: string | null;
+  /** Bots enabled for multi/director mode */
+  enabledBotIds: string[];
+  /** Collapsed state for session lists per bot */
+  collapsedBots: Record<string, boolean>;
   settingsUnlocked: boolean;
   /** Starred/favorite model IDs (instanceId:model format) */
   favoriteModels: string[];
@@ -172,7 +179,10 @@ type Action =
   | { type: "toggleComputer"; open?: boolean }
   | { type: "toggleAppSettings"; open?: boolean }
   | { type: "previewMascotMotion"; botId: string; kind: Exclude<MausMotion, "none"> }
-  | { type: "toggleDirector"; on: boolean }
+  | { type: "setChatMode"; mode: "single" | "director" | "group" }
+  | { type: "setDirector"; botId: string }
+  | { type: "toggleBotEnabled"; botId: string }
+  | { type: "toggleBotCollapsed"; botId: string }
   | { type: "unlockSettings"; on: boolean }
   | { type: "toggleFavoriteModel"; modelKey: string }
   | {
@@ -381,8 +391,19 @@ function reducer(state: AppState, action: Action): AppState {
     }
     case "previewMascotMotion":
       return withMascotMotion(state, action.botId, action.kind);
-    case "toggleDirector":
-      return { ...state, directorMode: action.on };
+    case "setChatMode":
+      return { ...state, chatMode: action.mode };
+    case "setDirector":
+      return { ...state, directorId: action.botId };
+    case "toggleBotEnabled": {
+      const enabled = state.enabledBotIds.includes(action.botId)
+        ? state.enabledBotIds.filter((id) => id !== action.botId)
+        : [...state.enabledBotIds, action.botId];
+      return { ...state, enabledBotIds: enabled };
+    }
+    case "toggleBotCollapsed": {
+      return { ...state, collapsedBots: { ...state.collapsedBots, [action.botId]: !state.collapsedBots[action.botId] } };
+    }
     case "unlockSettings":
       return { ...state, settingsUnlocked: action.on };
     case "toggleFavoriteModel": {
@@ -426,7 +447,10 @@ const initialState: AppState = {
   screens: {},
   provisioning: {},
   connected: false,
-  directorMode: false,
+  chatMode: "single",
+  directorId: null,
+  enabledBotIds: [],
+  collapsedBots: {},
   settingsUnlocked: false,
   favoriteModels: [],
   error: null,
@@ -477,9 +501,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         case "send": {
           // Director mode: route to Towelie (facilitator) who delegates to specialists
           let targetBotId = action.botId;
-          if (stateRef.current.directorMode) {
-            const towelie = stateRef.current.bots.find((b) => b.name === "Towelie" || b.title === "Director" || b.title === "Director & Facilitator");
-            if (towelie) targetBotId = towelie.id;
+          if (stateRef.current.chatMode !== "single") {
+            const director = stateRef.current.bots.find((b) => b.id === stateRef.current.directorId) || stateRef.current.bots.find((b) => b.name === "Towelie" || /director/i.test(b.title ?? ""));
+            if (director) targetBotId = director.id;
           }
           api(`/api/bots/${targetBotId}/messages`, {
             method: "POST",
