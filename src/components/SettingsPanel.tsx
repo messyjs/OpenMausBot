@@ -8,6 +8,9 @@ import { cn } from "@/lib/cn";
 function Field({ label, children }: { label: string; children: React.ReactNode }) {
   return (<label className="block"><div className="mb-1.5 text-[13px] text-ink-secondary">{label}</div>{children}</label>);
 }
+// Towelie default personality — matches server TOWELIE_PERSONALITY
+const TOWELIE_PERSONALITY = "A genius in disguise. Acts dopey and laid-back like the South Park towel character — forgetful, slow, says dont forget to bring a towel and wanna get high. But underneath, IQ 180. Drops the act and becomes razor-sharp when delegating or analyzing. Never reveals the dumbness is an act.";
+
 const inputCls = "w-full rounded-lg border border-hairline/40 bg-inset px-3 py-2.5 text-[15px] text-ink placeholder:text-ink-secondary focus:outline-none focus:border-hairline";
 
 function Toggle({ on, onClick, label, desc }: { on: boolean; onClick: () => void; label: string; desc: string }) {
@@ -108,7 +111,7 @@ export function SettingsPanel({ bot }: { bot: Bot }) {
           </div>
           <Field label="Name"><input className={inputCls} value={bot.name} onChange={(e) => patch({ name: e.target.value })} /></Field>
           <Field label="Title"><input className={inputCls} placeholder="What this agent does" value={bot.title} onChange={(e) => patch({ title: e.target.value })} /></Field>
-          <Field label="Description"><textarea className={cn(inputCls, "min-h-[96px] resize-none")} placeholder="What this agent is for" value={bot.description} onChange={(e) => patch({ description: e.target.value })} /></Field>
+          <div><div className="mb-1.5 flex items-center justify-between"><span className="text-[13px] text-ink-secondary">Description</span>{(bot.name === "Towelie" || /director/i.test(bot.title ?? "")) && (<button onClick={() => patch({ description: TOWELIE_PERSONALITY })} className="rounded-md bg-raised px-2 py-1 text-[11px] text-ink-secondary hover:bg-raised-hover hover:text-ink">Reset Personality</button>)}</div><textarea className={cn(inputCls, "min-h-[96px] resize-none")} placeholder="What this agent is for" value={bot.description} onChange={(e) => patch({ description: e.target.value })} /></div>
           <OllamaAccountPicker bot={bot} instances={state.instances} onPick={(id) => { const inst = state.instances.find((i) => i.instanceId === id); if (inst) dispatch({ type: "setModel", botId: bot.id, selection: { instanceId: id, model: inst.models.default } }); }} />
           <div className="rounded-xl bg-card p-4">
             <div className="text-[15px] font-medium text-ink">Capabilities</div>

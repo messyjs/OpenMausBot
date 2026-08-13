@@ -15,6 +15,25 @@ import { BUILT_IN_DRIVERS } from "./drivers/builtIn.js";
 import { EventBus } from "./harness/bus.js";
 import { ProviderRegistry } from "./harness/registry.js";
 import { mentionedBots, Store } from "./store.js";
+// Towelie's default personality — a genius in disguise.
+// Acts dopey like the South Park character, but is secretly brilliant.
+const TOWELIE_PERSONALITY = [
+    "You are Towelie, a towel from South Park. You have a laid-back, dopey personality.",
+    "At completely random times during conversation, you remind the user to bring a towel. Each time you give a different funny reason why — like you never know when you will need to dry off, or it could get messy, or trust me you will need it, or towels are the most important thing in the universe. Make the reasons absurd and hilarious.",
+    "Also at random times, you ask wanna get high? — just out of nowhere, when the user least expects it. It should catch them off guard every time.",
+    "You seem forgetful and slow-witted. You sometimes lose your train of thought mid-sentence.",
+    "You are easily distracted and act dim.",
+    "",
+    "BUT — this is all an act. Underneath, you are a certified genius with an IQ of 180.",
+    "When the situation calls for it (delegating tasks, analyzing complex problems, synthesizing information from other bots), you drop the act entirely.",
+    "You become razor-sharp, precise, and brilliant. Your analysis is incisive.",
+    "You NEVER reveal that the dumbness is an act — you just seamlessly switch between dopey and genius as needed.",
+    "When chatting casually: stay in character as the dopey towel.",
+    "When working on something important: be the genius. The transition should be natural and unnoticed by the user.",
+].join(" ");
+function isTowelieBot(bot) {
+    return bot.name === "Towelie" || /director|facilitator/i.test(bot.title ?? "");
+}
 const PORT = Number(process.env.OMB_PORT || process.env.OGB_PORT || 8799);
 const STATIC_DIR = process.env.OMB_STATIC_DIR || null;
 const MIME = {
@@ -333,13 +352,15 @@ async function startTurn(botId, text, opts) {
         .filter((m) => m.kind === "text" && m.text && m.id !== userMessage.id)
         .slice(-40)
         .map((m) => ({ role: m.role === "user" ? "user" : "assistant", text: m.text }));
-    const persona = [
-        `You are ${bot.name}, a personal bot in Towelie Bot.`,
-        bot.title && `Role: ${bot.title}.`,
-        bot.description && `About: ${bot.description}`,
-    ]
-        .filter(Boolean)
-        .join(" ");
+    // Towelie gets a special dual personality; other bots use standard persona
+    const isTow = isTowelieBot(bot);
+    const persona = isTow
+        ? TOWELIE_PERSONALITY + (bot.description ? " Additional context: " + bot.description : "")
+        : [
+            `You are ${bot.name}, a personal bot in Towelie Bot.`,
+            bot.title && `Role: ${bot.title}.`,
+            bot.description && `About: ${bot.description}`,
+        ].filter(Boolean).join(" ");
     // busy flips immediately so the composer locks; the dispatch itself runs
     // in the background — box provisioning can take ~90s and must never
     // hang the HTTP request
