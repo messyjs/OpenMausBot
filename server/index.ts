@@ -716,7 +716,7 @@ const server = createServer(async (req, res) => {
       await instance?.adapter.interruptTurn(bot.threadId);
       return json(res, 200, { ok: true });
     }
-    m = path.match(/^\/api\/bots\/([\w-]+)\/new-session\$/);
+    m = path.match(/^\/api\/bots\/([\w-]+)\/new-session$/);
     if (m && method === "POST") {
       const bot = store.bot(m[1]);
       if (!bot) return json(res, 404, { error: "no such bot" });

@@ -1,6 +1,6 @@
 import { track } from "@/lib/analytics";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Plus, Mic, Square } from "lucide-react";
+import { Plus, Mic, Square, Send } from "lucide-react";
 import { useStore, type Bot } from "@/state/store";
 import { cn } from "@/lib/cn";
 import { MausAvatar } from "./Avatar";
@@ -25,7 +25,7 @@ export function Composer({ bot }: { bot: Bot }) {
   const [caret, setCaret] = useState(0);
   const [highlight, setHighlight] = useState(0);
   const [dismissedAt, setDismissedAt] = useState<number | null>(null); // Esc'd this @
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   // what was typed before the mic went on — partials append after it
   const baseText = useRef("");
 
@@ -139,7 +139,8 @@ export function Composer({ bot }: { bot: Bot }) {
         >
           <Plus size={20} />
         </button>
-        <input
+        <textarea
+          rows={1}
           ref={inputRef}
           value={text}
           onChange={(e) => {
@@ -147,7 +148,7 @@ export function Composer({ bot }: { bot: Bot }) {
             setCaret(e.target.selectionStart ?? e.target.value.length);
             setDismissedAt(null);
           }}
-          onKeyUp={(e) => setCaret((e.target as HTMLInputElement).selectionStart ?? 0)}
+          onKeyUp={(e) => setCaret((e.target as HTMLTextAreaElement).selectionStart ?? 0)}
           onClick={(e) => setCaret((e.target as HTMLInputElement).selectionStart ?? 0)}
           onKeyDown={(e) => {
             if (pickerOpen) {
@@ -168,15 +169,17 @@ export function Composer({ bot }: { bot: Bot }) {
                 return;
               }
             }
-            if (e.key === "Enter") send();
+            if (e.key === "Enter" && e.shiftKey) { e.preventDefault(); send(); }
             if (e.key === "Escape" && recording) setRecording(false);
           }}
           placeholder={
-            recording ? "Listening…" : bot.busy ? `${bot.name} is working…` : `Message ${bot.name}`
+            recording ? "Listening…" : bot.busy ? `${bot.name} is working…` : `Message ${bot.name} (Enter=newline, Shift+Enter=send)`
           }
-          className="w-full bg-transparent text-[15px] text-ink placeholder:text-ink-secondary focus:outline-none"
-        />
-        {bot.busy ? (
+          className="w-full bg-transparent text-[15px] text-ink placeholder:text-ink-secondary resize-none focus:outline-none"
+        ></textarea>
+        {text.trim() && !bot.busy ? (
+          <button onClick={send} className="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent text-white hover:bg-accent/90" title="Send (Shift+Enter)"><Send size={16} /></button>
+        ) : bot.busy ? (
           <button
             onClick={() => dispatch({ type: "interrupt", botId: bot.id })}
             className="flex size-8 shrink-0 items-center justify-center rounded-full text-ink-secondary hover:bg-raised hover:text-ink"
