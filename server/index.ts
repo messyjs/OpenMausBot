@@ -456,6 +456,7 @@ async function startTurn(botId: string, text: string, opts?: { commsDepth?: numb
         transcript,
         system:
           persona +
+          (integrations.botTools && instance.driverKind === "ollama" ? " You have access to tools: " + integrations.botTools.tools.map((t: any) => t.function.name).join(", ") + ". Use execute_command to run shell commands like opening files or building projects. Use read_file, write_file, list_directory for file operations. Use remember/recall for memory." + (bot.deviceId ? " Commands run on device " + bot.deviceId + "." : " Commands run on this machine.") : "") +
           (integrations.computer && instance.driverKind !== "boxAgent"
             ? " You have your own cloud computer — use the computer tools (screenshot, computer_exec, open_url) whenever browsing or acting on a desktop helps."
             : integrations.localComputer
@@ -634,6 +635,7 @@ const server = createServer(async (req, res) => {
       if (body.title) store.patchBot(bot.id, { title: String(body.title) });
       if (body.description) store.patchBot(bot.id, { description: String(body.description) });
       if (body.color) store.patchBot(bot.id, { color: String(body.color) as any });
+      if (body.towelieBehavior !== undefined) store.patchBot(bot.id, { towelieBehavior: Boolean(body.towelieBehavior) });
       broadcast({ kind: "bot", bot: store.bot(bot.id) });
       return json(res, 201, { bot: { ...store.bot(bot.id)!, messages: store.messagesFor(bot.threadId) } });
     }

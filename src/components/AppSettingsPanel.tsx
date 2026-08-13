@@ -80,6 +80,16 @@ export function AppSettingsPanel() {
         </div>
 
         <div className="mt-4 rounded-xl bg-card p-4">
+          <div className="text-[15px] font-medium text-ink">Ollama — MJ Laptop</div>
+          <div className="mt-0.5 text-[13px] text-ink-secondary">
+            MJ Laptop Ollama via Cloudflare tunnel (RTX 4080).
+          </div>
+          <div className="mt-4">
+            <ApiKeyRow section="ollamaMjLaptopUrl" label="MJ Laptop URL" placeholder="https://ollama-mjlaptop.messy-jesse.com" />
+          </div>
+        </div>
+
+        <div className="mt-4 rounded-xl bg-card p-4">
           <div className="text-[15px] font-medium text-ink">Ollama — Workstation</div>
           <div className="mt-0.5 text-[13px] text-ink-secondary">
             Remote Ollama on your LAN. Larger models run here.

@@ -1,5 +1,4 @@
 // Bot tools — functions that Ollama bots can call during a turn.
-import { execSync } from "node:child_process";
 import { readFileSync, writeFileSync, readdirSync, mkdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
@@ -47,8 +46,21 @@ export function createToolExecutor(cfg, botDeviceId) {
             return r.stdout + (r.stderr ? nl + "[stderr] " + r.stderr : "") + nl + "[exit: " + r.exitCode + "]";
         }
         try {
-            const out = execSync(cmd, { timeout, encoding: "utf8", maxBuffer: 1024 * 1024 });
-            return String(out);
+            // Use spawn for non-blocking execution (GUI apps like notepad won't block)
+            const { spawn } = require("node:child_process");
+            const isWindows = process.platform === "win32";
+            const child = spawn(isWindows ? "cmd" : "/bin/sh", isWindows ? ["/c", cmd] : ["-c", cmd], { detached: !isWindows, stdio: ["pipe", "pipe", "pipe"] });
+            let stdout = "", stderr = "";
+            child.stdout?.on("data", (d) => stdout += d.toString());
+            child.stderr?.on("data", (d) => stderr += d.toString());
+            return new Promise((resolve) => {
+                const timer = setTimeout(() => { try {
+                    child.kill();
+                }
+                catch { } resolve(stdout + (stderr ? nl + "[stderr] " + stderr : "") + nl + "[timed out after " + timeout + "ms]"); }, timeout);
+                child.on("close", (code) => { clearTimeout(timer); resolve(stdout + (stderr ? nl + "[stderr] " + stderr : "") + nl + "[exit: " + code + "]"); });
+                child.on("error", (e) => { clearTimeout(timer); resolve("Error: " + e.message); });
+            });
         }
         catch (e) {
             return "Error: " + (e instanceof Error ? e.message : String(e));

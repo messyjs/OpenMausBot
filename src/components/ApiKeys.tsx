@@ -12,6 +12,7 @@ export type ConfigSection =
   | "box"
   | "ollamaLocalUrl"
   | "ollamaWorkstationUrl"
+  | "ollamaMjLaptopUrl"
   | "ollamaCloudUrl"
   | "ollamaCloudApiKey";
 
@@ -40,6 +41,12 @@ const SECTIONS: Record<ConfigSection, SectionDef> = {
     flag: () => true,
     plaintext: true,
     displayValue: (c) => c.ollamaWorkstation?.url,
+  },
+  ollamaMjLaptopUrl: {
+    body: (v) => ({ ollamaMjLaptop: { url: v } }),
+    flag: () => true,
+    plaintext: true,
+    displayValue: (c) => (c as any).ollamaMjLaptop?.url,
   },
   ollamaCloudUrl: {
     body: (v) => ({ ollamaCloud: { url: v } }),
