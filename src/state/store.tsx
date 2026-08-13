@@ -131,6 +131,8 @@ interface AppState {
   /** Director mode: messages route to Towelie who delegates to specialists */
   directorMode: boolean;
   settingsUnlocked: boolean;
+  /** Starred/favorite model IDs (instanceId:model format) */
+  favoriteModels: string[];
   error: string | null;
   mascotMotion: {
     botId: string;
@@ -172,6 +174,7 @@ type Action =
   | { type: "previewMascotMotion"; botId: string; kind: Exclude<MausMotion, "none"> }
   | { type: "toggleDirector"; on: boolean }
   | { type: "unlockSettings"; on: boolean }
+  | { type: "toggleFavoriteModel"; modelKey: string }
   | {
       type: "updateBot";
       botId: string;
@@ -382,6 +385,12 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, directorMode: action.on };
     case "unlockSettings":
       return { ...state, settingsUnlocked: action.on };
+    case "toggleFavoriteModel": {
+      const favs = state.favoriteModels.includes(action.modelKey)
+        ? state.favoriteModels.filter((f) => f !== action.modelKey)
+        : [...state.favoriteModels, action.modelKey];
+      return { ...state, favoriteModels: favs };
+    }
     case "updateBot": {
       const mascotChanged =
         Object.prototype.hasOwnProperty.call(action.patch, "color") ||
@@ -419,6 +428,7 @@ const initialState: AppState = {
   connected: false,
   directorMode: false,
   settingsUnlocked: false,
+  favoriteModels: [],
   error: null,
   mascotMotion: null,
 };

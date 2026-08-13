@@ -2,7 +2,7 @@
 // Routing is by exact instanceId only — an entry is never inferred from a
 // driver kind, and unavailable instances render disabled with the reason.
 import { useEffect, useRef, useState } from "react";
-import { Check, ChevronDown } from "lucide-react";
+import { Check, ChevronDown, Star } from "lucide-react";
 import { useStore, type Bot, type InstanceInfo } from "@/state/store";
 import { ProviderMark } from "./ProviderIcons";
 import { cn } from "@/lib/cn";
@@ -116,6 +116,9 @@ export function ModelPicker({ bot, className }: { bot: Bot; className?: string }
                       )}
                     >
                       <span className="flex min-w-0 items-center gap-2">
+                        <button onClick={(e) => { e.stopPropagation(); dispatch({ type: "toggleFavoriteModel", modelKey: railInstance.instanceId + ":" + option.id }); }} className="shrink-0" title="Star this model">
+                          <Star size={12} className={state.favoriteModels.includes(railInstance.instanceId + ":" + option.id) ? "fill-[#facc15] text-[#facc15]" : "text-ink-secondary/40 hover:text-ink-secondary"} />
+                        </button>
                         <span className="truncate">{option.label}</span>
                         {option.id === railInstance.models.default && (
                           <span className="shrink-0 rounded bg-inset px-1 py-px text-[10px] text-ink-secondary">
