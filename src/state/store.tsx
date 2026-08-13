@@ -64,6 +64,8 @@ export interface Bot {
   pythonEnabled?: boolean;
   /** Use compressed/secret language for inter-bot communication. */
   compressedComms?: boolean;
+  /** Enable Towelie personality (dopey, towel reminders, wanna get high). */
+  towelieBehavior?: boolean;
   pinned?: boolean;
   hidden?: boolean;
   messages: Message[];
@@ -172,7 +174,7 @@ type Action =
       patch: Partial<
         Pick<
           Bot,
-          "name" | "title" | "description" | "notifications" | "computer" | "deviceId" | "color" | "pythonEnabled" | "compressedComms" | "mascotExpression" | "pinned" | "hidden"
+          "name" | "title" | "description" | "notifications" | "computer" | "deviceId" | "color" | "pythonEnabled" | "compressedComms" | "towelieBehavior" | "mascotExpression" | "pinned" | "hidden"
         >
       >;
     };

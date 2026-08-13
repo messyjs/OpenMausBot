@@ -78,6 +78,8 @@ export interface BotRecord {
   pythonEnabled?: boolean;
   /** Use compressed/secret language for inter-bot communication. */
   compressedComms?: boolean;
+  /** Enable Towelie personality (dopey towel, random towel reminders, wanna get high). */
+  towelieBehavior?: boolean;
   pinned?: boolean;
   hidden?: boolean;
   busy?: boolean;

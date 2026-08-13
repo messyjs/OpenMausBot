@@ -353,7 +353,7 @@ async function startTurn(botId, text, opts) {
         .slice(-40)
         .map((m) => ({ role: m.role === "user" ? "user" : "assistant", text: m.text }));
     // Towelie gets a special dual personality; other bots use standard persona
-    const isTow = isTowelieBot(bot);
+    const isTow = isTowelieBot(bot) && bot.towelieBehavior !== false;
     const persona = isTow
         ? TOWELIE_PERSONALITY + (bot.description ? " Additional context: " + bot.description : "")
         : [
@@ -606,7 +606,7 @@ const server = createServer(async (req, res) => {
         if (m && method === "PATCH") {
             const body = await readBody(req);
             const patch = {};
-            for (const key of ["name", "title", "description", "notifications", "modelSelection", "unread", "computer", "deviceId", "color", "mascotExpression", "pinned", "hidden", "pythonEnabled", "compressedComms"]) {
+            for (const key of ["name", "title", "description", "notifications", "modelSelection", "unread", "computer", "deviceId", "color", "mascotExpression", "pinned", "hidden", "pythonEnabled", "compressedComms", "towelieBehavior"]) {
                 if (body[key] !== undefined)
                     patch[key] = body[key];
             }

@@ -66,7 +66,7 @@ function OllamaAccountPicker({ bot, instances, onPick }: { bot: Bot; instances: 
 }
 export function SettingsPanel({ bot }: { bot: Bot }) {
   const { state, dispatch } = useStore();
-  const patch = (p: Partial<Pick<Bot, "name"|"title"|"description"|"notifications"|"computer"|"color"|"mascotExpression"|"pythonEnabled"|"compressedComms">>) => dispatch({ type: "updateBot", botId: bot.id, patch: p });
+  const patch = (p: Partial<Pick<Bot, "name"|"title"|"description"|"notifications"|"computer"|"color"|"mascotExpression"|"pythonEnabled"|"compressedComms"|"towelieBehavior">>) => dispatch({ type: "updateBot", botId: bot.id, patch: p });
   const activeExpression = expressionForBot(bot);
   const mascotMotion = state.mascotMotion?.botId === bot.id ? state.mascotMotion : null;
   return (
@@ -125,6 +125,9 @@ export function SettingsPanel({ bot }: { bot: Bot }) {
               </div>
             </div>
           </div>
+          {(bot.name === "Towelie" || /director/i.test(bot.title ?? "")) && (
+            <Toggle on={bot.towelieBehavior !== false} onClick={() => patch({ towelieBehavior: bot.towelieBehavior === false ? true : false })} label="Towelie Behavior" desc="Dopey personality, random towel reminders, wanna get high — the full South Park act" />
+          )}
           <Toggle on={!!bot.pythonEnabled} onClick={() => patch({ pythonEnabled: !bot.pythonEnabled })} label="Python Runtime" desc="Bot can execute Python code in a sandbox" />
           <Toggle on={!!bot.compressedComms} onClick={() => patch({ compressedComms: !bot.compressedComms })} label="Secret Language" desc="Compressed inter-bot communication to save tokens" />
           <Toggle on={!!bot.notifications} onClick={() => patch({ notifications: !bot.notifications })} label="Notifications" desc="Get notified when this agent finishes or needs input" />
