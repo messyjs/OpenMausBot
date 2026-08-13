@@ -10,6 +10,7 @@ import { fileURLToPath } from "node:url";
 
 import * as box from "./box.ts";
 import * as devices from "./devices.ts";
+import { getToolsForBot, createToolExecutor } from "./bot-tools.ts";
 import * as composio from "./composio.ts";
 import { ensureDirs, instanceConfigs, loadConfig, saveConfig, EVENTS_DIR, NATIVE_DIR } from "./config.ts";
 import type { RuntimeEvent } from "./contracts.ts";
@@ -425,6 +426,17 @@ async function startTurn(botId: string, text: string, opts?: { commsDepth?: numb
         store.bots.filter((b) => b.id !== bot.id && !b.hidden).length > 0
       ) {
         integrations.agents = agentsIntegration(bot.id, commsDepth);
+      }
+      // Bot tool calling: give Ollama bots access to shell, file, device, and memory tools
+      if (instance.driverKind === "ollama") {
+        const hasNetwork = bot.computer === "network" || !!bot.deviceId;
+        const botTools = getToolsForBot({ hasNetwork });
+        if (botTools.length > 0) {
+          integrations.botTools = {
+            tools: botTools,
+            executors: createToolExecutor(cfg, bot.deviceId),
+          } as any;
+        }
       }
       // @mentions in the user's message (the composer's tagging UI) become
       // an explicit delegation nudge — the agent still does the ask_bot call

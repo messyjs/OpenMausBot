@@ -115,17 +115,18 @@ export const OllamaDriver: ProviderDriver<OllamaConfig> = {
 
     // ── core chat completion (Ollama /api/chat, NDJSON streaming) ──────
     const complete = async (
-      messages: Array<{ role: string; content: string }>,
+      messages: Array<Record<string, unknown>>,
       model: string,
-      opts: { stream: boolean; signal?: AbortSignal; onDelta?: (d: string) => void },
-    ): Promise<{ text: string; usage: { input: number; output: number } | null }> => {
+      opts: { stream: boolean; signal?: AbortSignal; onDelta?: (d: string) => void; tools?: unknown[] },
+    ): Promise<{ text: string; usage: { input: number; output: number } | null; toolCalls: Array<{ name: string; arguments: string }> }> => {
       const headers: Record<string, string> = { "content-type": "application/json" };
       if (apiKey) headers.authorization = `Bearer ${apiKey}`;
+      const reqBody: Record<string, unknown> = { model, messages, stream: opts.stream };
+      if (opts.tools && opts.tools.length > 0) reqBody.tools = opts.tools;
       const res = await fetch(`${config.url}/api/chat`, {
         method: "POST",
         headers,
-        body: JSON.stringify({ model, messages, stream: opts.stream }),
-        signal: opts.signal ?? AbortSignal.timeout(300_000), // local models can be slow
+        body: JSON.stringify(reqBody),
       });
       if (!res.ok) {
         const body = await res.text().catch(() => "");
@@ -134,18 +135,14 @@ export const OllamaDriver: ProviderDriver<OllamaConfig> = {
 
       if (!opts.stream) {
         const json: any = await res.json();
-        return {
-          text: json.message?.content ?? "",
-          usage: json.eval_count
-            ? { input: json.prompt_eval_count ?? 0, output: json.eval_count ?? 0 }
-            : null,
-        };
+        const tcs = (json.message?.tool_calls ?? []).map((tc: any) => ({ name: tc.function?.name ?? "", arguments: typeof tc.function?.arguments === "string" ? tc.function.arguments : JSON.stringify(tc.function?.arguments ?? {}) }));
+        return { text: json.message?.content ?? "", usage: json.eval_count ? { input: json.prompt_eval_count ?? 0, output: json.eval_count ?? 0 } : null, toolCalls: tcs };
       }
-
       // Ollama streams NDJSON: one JSON object per line, each with a
       // `message.content` delta. The final line has `done: true`.
       let text = "";
       let usage: { input: number; output: number } | null = null;
+      const toolCalls: Array<{ name: string; arguments: string }> = [];
       const reader = res.body!.getReader();
       const decoder = new TextDecoder();
       let buf = "";
@@ -169,6 +166,11 @@ export const OllamaDriver: ProviderDriver<OllamaConfig> = {
             text += delta;
             opts.onDelta?.(delta);
           }
+          if (chunk.message?.tool_calls) {
+            for (const tc of chunk.message.tool_calls) {
+              toolCalls.push({ name: tc.function?.name ?? "", arguments: typeof tc.function?.arguments === "string" ? tc.function.arguments : JSON.stringify(tc.function?.arguments ?? {}) });
+            }
+          }
           if (chunk.done) {
             usage = {
               input: chunk.prompt_eval_count ?? 0,
@@ -177,7 +179,7 @@ export const OllamaDriver: ProviderDriver<OllamaConfig> = {
           }
         }
       }
-      return { text, usage };
+      return { text, usage, toolCalls };
     };
 
     const sendTurn = async (turn: SendTurnInput) => {

@@ -9,6 +9,7 @@ import { dirname, extname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import * as box from "./box.js";
 import * as devices from "./devices.js";
+import { getToolsForBot, createToolExecutor } from "./bot-tools.js";
 import * as composio from "./composio.js";
 import { ensureDirs, instanceConfigs, loadConfig, saveConfig, EVENTS_DIR, NATIVE_DIR } from "./config.js";
 import { BUILT_IN_DRIVERS } from "./drivers/builtIn.js";
@@ -406,6 +407,17 @@ async function startTurn(botId, text, opts) {
                 instance.adapter.capabilities.agentsMcp === true &&
                 store.bots.filter((b) => b.id !== bot.id && !b.hidden).length > 0) {
                 integrations.agents = agentsIntegration(bot.id, commsDepth);
+            }
+            // Bot tool calling: give Ollama bots access to shell, file, device, and memory tools
+            if (instance.driverKind === "ollama") {
+                const hasNetwork = bot.computer === "network" || !!bot.deviceId;
+                const botTools = getToolsForBot({ hasNetwork });
+                if (botTools.length > 0) {
+                    integrations.botTools = {
+                        tools: botTools,
+                        executors: createToolExecutor(cfg, bot.deviceId),
+                    };
+                }
             }
             // @mentions in the user's message (the composer's tagging UI) become
             // an explicit delegation nudge — the agent still does the ask_bot call

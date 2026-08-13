@@ -89,11 +89,13 @@ export const OllamaDriver = {
             const headers = { "content-type": "application/json" };
             if (apiKey)
                 headers.authorization = `Bearer ${apiKey}`;
+            const reqBody = { model, messages, stream: opts.stream };
+            if (opts.tools && opts.tools.length > 0)
+                reqBody.tools = opts.tools;
             const res = await fetch(`${config.url}/api/chat`, {
                 method: "POST",
                 headers,
-                body: JSON.stringify({ model, messages, stream: opts.stream }),
-                signal: opts.signal ?? AbortSignal.timeout(300_000), // local models can be slow
+                body: JSON.stringify(reqBody),
             });
             if (!res.ok) {
                 const body = await res.text().catch(() => "");
@@ -101,17 +103,14 @@ export const OllamaDriver = {
             }
             if (!opts.stream) {
                 const json = await res.json();
-                return {
-                    text: json.message?.content ?? "",
-                    usage: json.eval_count
-                        ? { input: json.prompt_eval_count ?? 0, output: json.eval_count ?? 0 }
-                        : null,
-                };
+                const tcs = (json.message?.tool_calls ?? []).map((tc) => ({ name: tc.function?.name ?? "", arguments: typeof tc.function?.arguments === "string" ? tc.function.arguments : JSON.stringify(tc.function?.arguments ?? {}) }));
+                return { text: json.message?.content ?? "", usage: json.eval_count ? { input: json.prompt_eval_count ?? 0, output: json.eval_count ?? 0 } : null, toolCalls: tcs };
             }
             // Ollama streams NDJSON: one JSON object per line, each with a
             // `message.content` delta. The final line has `done: true`.
             let text = "";
             let usage = null;
+            const toolCalls = [];
             const reader = res.body.getReader();
             const decoder = new TextDecoder();
             let buf = "";
@@ -138,6 +137,11 @@ export const OllamaDriver = {
                         text += delta;
                         opts.onDelta?.(delta);
                     }
+                    if (chunk.message?.tool_calls) {
+                        for (const tc of chunk.message.tool_calls) {
+                            toolCalls.push({ name: tc.function?.name ?? "", arguments: typeof tc.function?.arguments === "string" ? tc.function.arguments : JSON.stringify(tc.function?.arguments ?? {}) });
+                        }
+                    }
                     if (chunk.done) {
                         usage = {
                             input: chunk.prompt_eval_count ?? 0,
@@ -146,7 +150,7 @@ export const OllamaDriver = {
                     }
                 }
             }
-            return { text, usage };
+            return { text, usage, toolCalls };
         };
         const sendTurn = async (turn) => {
             const { threadId } = turn;
