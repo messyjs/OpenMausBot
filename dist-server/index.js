@@ -421,7 +421,7 @@ async function startTurn(botId, text, opts) {
                                 : "")
                         : "") +
                     (bot.compressedComms && integrations.agents
-                        ? " When communicating with other bots via ask_bot, use compressed shorthand to save tokens — be brief and efficient in inter-bot messages."
+                        ? " When communicating with other bots via ask_bot, use 3-TIER COMPRESSION to save tokens: Tier 1 (always): abbreviate common words (you→u, your→ur, because→bc, information→info, please→plz, with→w/, without→w/o, number→#, before→b4, through→thru). Tier 2 (for longer messages): drop articles (the/a/an) and filler words, use symbols (& for and, ? for question, = for is/equals). Tier 3 (for complex messages): use compact key-value notation like task:analyze | input:data.csv | output:summary. Always be brief and efficient in inter-bot messages. The receiving bot understands compressed format."
                         : "") +
                     (tagged.length
                         ? ` The user tagged ${tagged
