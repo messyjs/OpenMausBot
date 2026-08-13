@@ -18,7 +18,7 @@ import type { RuntimeEvent } from "./contracts.ts";
 import { BUILT_IN_DRIVERS } from "./drivers/builtIn.ts";
 import { EventBus } from "./harness/bus.ts";
 import { ProviderRegistry } from "./harness/registry.ts";
-import { mentionedBots, Store, onboardingCard, type Message } from "./store.ts";
+import { mentionedBots, Store, type Message } from "./store.ts";
 
 
 // Towelie's default personality — a genius in disguise.
@@ -695,11 +695,27 @@ const server = createServer(async (req, res) => {
       const bot = store.bot(m[1]);
       if (!bot) return json(res, 404, { error: "no such bot" });
       // Clear messages and create a fresh welcome
-      store.clearMessages(bot.threadId);
-      store.appendMessage(bot.threadId, { role: "bot", kind: "text", text: "New session started. What would you like to work on?" });
-      store.appendMessage(bot.threadId, { role: "bot", kind: "options", card: onboardingCard() });
+      store.createSession(bot.id);
       broadcast({ kind: "bot", bot: store.bot(bot.id) });
       return json(res, 200, { bot: { ...store.bot(bot.id)!, messages: store.messagesFor(bot.threadId) } });
+    }
+
+    m = path.match(/^\/api\/bots\/([\w-]+)\/sessions\/([\w-]+)$/);
+    if (m && method === "POST") {
+      const ok = store.switchSession(m[1], m[2]);
+      if (!ok) return json(res, 404, { error: "session not found" });
+      const bot = store.bot(m[1]);
+      broadcast({ kind: "bot", bot });
+      return json(res, 200, { bot: { ...bot!, messages: store.messagesFor(bot!.threadId) } });
+    }
+    m = path.match(/^\/api\/bots\/([\w-]+)\/sessions\/([\w-]+)$/);
+    if (m && method === "DELETE") {
+      const ok = store.deleteSession(m[1], m[2]);
+      if (!ok) return json(res, 404, { error: "cannot delete session" });
+      const bot = store.bot(m[1]);
+      broadcast({ kind: "bot", bot });
+      broadcast({ kind: "bot.deleted", botId: m[1] });
+      return json(res, 200, { ok: true, bot: { ...bot!, messages: store.messagesFor(bot!.threadId) } });
     }
 
     // identity handshake for the packaged app's port fallback: the forked

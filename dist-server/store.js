@@ -103,6 +103,8 @@ export class Store {
         const bot = {
             id: newId(),
             threadId: newId(),
+            activeSessionId: "s1",
+            sessions: [{ id: "s1", threadId: newId(), title: "Session 1", createdAt: Date.now(), lastActiveAt: Date.now() }],
             name: "New Bot",
             title: "",
             description: "",
@@ -126,6 +128,58 @@ export class Store {
     clearMessages(threadId) {
         this.messages.set(threadId, []);
         this.saveBots();
+    }
+    createSession(botId) {
+        const bot = this.bot(botId);
+        if (!bot)
+            return null;
+        const sid = "s" + (bot.sessions?.length ?? 0 + 1);
+        const tid = newId();
+        const session = { id: sid, threadId: tid, title: "Session " + ((bot.sessions?.length ?? 0) + 1), createdAt: Date.now(), lastActiveAt: Date.now() };
+        bot.sessions = [...(bot.sessions ?? []), session];
+        bot.activeSessionId = sid;
+        bot.threadId = tid;
+        this.appendMessage(tid, { role: "bot", kind: "text", text: "New session started. What would you like to work on?" });
+        this.appendMessage(tid, { role: "bot", kind: "options", card: onboardingCard() });
+        this.saveBots();
+        return session;
+    }
+    switchSession(botId, sessionId) {
+        const bot = this.bot(botId);
+        if (!bot || !bot.sessions)
+            return false;
+        const session = bot.sessions.find((s) => s.id === sessionId);
+        if (!session)
+            return false;
+        bot.activeSessionId = sessionId;
+        bot.threadId = session.threadId;
+        session.lastActiveAt = Date.now();
+        this.saveBots();
+        return true;
+    }
+    deleteSession(botId, sessionId) {
+        const bot = this.bot(botId);
+        if (!bot || !bot.sessions)
+            return false;
+        const session = bot.sessions.find((s) => s.id === sessionId);
+        if (!session)
+            return false;
+        // Don't delete the last session
+        if (bot.sessions.length <= 1)
+            return false;
+        // Delete message file
+        try {
+            unlinkSync(messagesFile(session.threadId));
+        }
+        catch { }
+        this.messages.delete(session.threadId);
+        bot.sessions = bot.sessions.filter((s) => s.id !== sessionId);
+        // Switch to first remaining session
+        const next = bot.sessions[0];
+        bot.activeSessionId = next.id;
+        bot.threadId = next.threadId;
+        this.saveBots();
+        return true;
     }
     deleteBot(id) {
         const bot = this.bot(id);

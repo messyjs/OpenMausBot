@@ -1,6 +1,6 @@
 import { track } from "@/lib/analytics";
 import { useEffect, useState } from "react";
-import { Pin, PinOff, Plus, Search, Settings, Puzzle, Trash2, Users, MessageSquare } from "lucide-react";
+import { Pin, PinOff, Plus, Search, Settings, Puzzle, Trash2, Users, MessageSquare, ChevronDown, ChevronRight, X } from "lucide-react";
 import { useStore, formatTime, type Bot } from "@/state/store";
 import { MausAvatar, InitialsAvatar } from "./Avatar";
 import { expressionForBot } from "@/lib/mascot";
@@ -75,6 +75,9 @@ function BotListItem({ bot, onMenu, isDirector }: { bot: Bot; onMenu: (m: MenuSt
   const last = bot.messages[bot.messages.length - 1];
   const enabled = state.enabledBotIds.includes(bot.id);
   const mascotMotion = state.mascotMotion?.botId === bot.id ? state.mascotMotion : null;
+  const sessions = bot.sessions ?? [];
+  const collapsed = state.collapsedBots[bot.id] ?? true;
+  const activeSession = sessions.find((s) => s.id === bot.activeSessionId) ?? sessions[0];
 
   return (
     <div className="group flex flex-col">
@@ -95,6 +98,12 @@ function BotListItem({ bot, onMenu, isDirector }: { bot: Bot; onMenu: (m: MenuSt
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline justify-between gap-2">
             <span className="flex min-w-0 items-center gap-1.5 truncate text-[15px] font-semibold text-ink">
+              {sessions.length > 1 && (
+                <button onClick={(e) => { e.stopPropagation(); dispatch({ type: "toggleBotCollapsed", botId: bot.id }); }} className="shrink-0 text-ink-secondary hover:text-ink">
+                  {collapsed ? <ChevronRight size={14} /> : <ChevronDown size={14} />}
+                </button>
+              )}
+              
               {bot.pinned && <Pin size={12} className="shrink-0 text-ink-secondary" />}
               <span className="truncate">{bot.name}</span>
             </span>
@@ -110,6 +119,23 @@ function BotListItem({ bot, onMenu, isDirector }: { bot: Bot; onMenu: (m: MenuSt
           <Trash2 size={14} />
         </button>
       </button>
+      {/* Collapsible session list */}
+      {!collapsed && sessions.length > 1 && (
+        <div className="ml-10 flex flex-col gap-0.5 pb-1">
+          {sessions.map((s) => (
+            <button key={s.id} onClick={() => dispatch({ type: "switchSession", botId: bot.id, sessionId: s.id })}
+              className={cn("group/sess flex items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[12px]",
+                activeSession?.id === s.id && selected ? "bg-raised text-ink" : "text-ink-secondary hover:bg-raised/40 hover:text-ink")}>
+              <MessageSquare size={11} className="shrink-0 opacity-60" />
+              <span className="truncate flex-1">{s.title}</span>
+              {sessions.length > 1 && (
+                <button onClick={(e) => { e.stopPropagation(); if (confirm("Delete this session?")) dispatch({ type: "deleteSession", botId: bot.id, sessionId: s.id }); }}
+                  className="shrink-0 opacity-0 group-hover/sess:opacity-100 hover:text-danger"><X size={11} /></button>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

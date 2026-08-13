@@ -39,6 +39,16 @@ export interface Message {
   at: number;
 }
 
+export interface SessionInfo {
+  id: string;
+  threadId: string;
+  title: string;
+  createdAt: number;
+  lastActiveAt: number;
+  isMicro?: boolean;
+  parentSessionId?: string;
+}
+
 export interface ModelSelection {
   instanceId: string;
   model: string;
@@ -60,6 +70,9 @@ export interface Bot {
   computer?: "cloud" | "local" | "network" | "off";
   /** When computer is "network", which device to use. */
   deviceId?: string;
+  /** Chat sessions for this bot */
+  sessions?: SessionInfo[];
+  activeSessionId?: string;
   /** Enable Python code execution for this bot. */
   pythonEnabled?: boolean;
   /** Use compressed/secret language for inter-bot communication. */
@@ -137,6 +150,10 @@ interface AppState {
   enabledBotIds: string[];
   /** Collapsed state for session lists per bot */
   collapsedBots: Record<string, boolean>;
+  /** Split pane position (0-100, percentage of top pane) */
+  splitPosition: number;
+  /** Secondary session (bottom pane) */
+  secondarySession: { botId: string; sessionId: string } | null;
   settingsUnlocked: boolean;
   /** Starred/favorite model IDs (instanceId:model format) */
   favoriteModels: string[];
@@ -184,6 +201,10 @@ type Action =
   | { type: "toggleBotEnabled"; botId: string }
   | { type: "toggleBotCollapsed"; botId: string }
   | { type: "newSession"; botId: string }
+  | { type: "switchSession"; botId: string; sessionId: string }
+  | { type: "deleteSession"; botId: string; sessionId: string }
+  | { type: "setSplitPosition"; position: number }
+  | { type: "setSecondarySession"; session: { botId: string; sessionId: string } | null }
   | { type: "unlockSettings"; on: boolean }
   | { type: "toggleFavoriteModel"; modelKey: string }
   | {
@@ -405,6 +426,10 @@ function reducer(state: AppState, action: Action): AppState {
     case "toggleBotCollapsed": {
       return { ...state, collapsedBots: { ...state.collapsedBots, [action.botId]: !state.collapsedBots[action.botId] } };
     }
+    case "setSplitPosition":
+      return { ...state, splitPosition: action.position };
+    case "setSecondarySession":
+      return { ...state, secondarySession: action.session };
     case "unlockSettings":
       return { ...state, settingsUnlocked: action.on };
     case "toggleFavoriteModel": {
@@ -452,6 +477,8 @@ const initialState: AppState = {
   directorId: null,
   enabledBotIds: [],
   collapsedBots: {},
+  splitPosition: 50,
+  secondarySession: null,
   settingsUnlocked: false,
   favoriteModels: [],
   error: null,
@@ -586,6 +613,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           break;
         case "newSession":
           api(`/api/bots/${action.botId}/new-session`, { method: "POST" })
+            .then(({ bot }) => rawDispatch({ type: "hydrate", bots: stateRef.current.bots.map((b) => b.id === bot.id ? bot : b) }))
+            .catch(showError);
+          break;
+        case "switchSession":
+          api(`/api/bots/${action.botId}/sessions/${action.sessionId}`, { method: "POST" })
+            .then(({ bot }) => rawDispatch({ type: "hydrate", bots: stateRef.current.bots.map((b) => b.id === bot.id ? bot : b) }))
+            .catch(showError);
+          break;
+        case "deleteSession":
+          api(`/api/bots/${action.botId}/sessions/${action.sessionId}`, { method: "DELETE" })
             .then(({ bot }) => rawDispatch({ type: "hydrate", bots: stateRef.current.bots.map((b) => b.id === bot.id ? bot : b) }))
             .catch(showError);
           break;

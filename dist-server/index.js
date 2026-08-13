@@ -15,7 +15,7 @@ import { ensureDirs, instanceConfigs, loadConfig, saveConfig, EVENTS_DIR, NATIVE
 import { BUILT_IN_DRIVERS } from "./drivers/builtIn.js";
 import { EventBus } from "./harness/bus.js";
 import { ProviderRegistry } from "./harness/registry.js";
-import { mentionedBots, Store, onboardingCard } from "./store.js";
+import { mentionedBots, Store } from "./store.js";
 // Towelie's default personality — a genius in disguise.
 // Acts dopey like the South Park character, but is secretly brilliant.
 const TOWELIE_PERSONALITY = [
@@ -690,11 +690,28 @@ const server = createServer(async (req, res) => {
             if (!bot)
                 return json(res, 404, { error: "no such bot" });
             // Clear messages and create a fresh welcome
-            store.clearMessages(bot.threadId);
-            store.appendMessage(bot.threadId, { role: "bot", kind: "text", text: "New session started. What would you like to work on?" });
-            store.appendMessage(bot.threadId, { role: "bot", kind: "options", card: onboardingCard() });
+            store.createSession(bot.id);
             broadcast({ kind: "bot", bot: store.bot(bot.id) });
             return json(res, 200, { bot: { ...store.bot(bot.id), messages: store.messagesFor(bot.threadId) } });
+        }
+        m = path.match(/^\/api\/bots\/([\w-]+)\/sessions\/([\w-]+)$/);
+        if (m && method === "POST") {
+            const ok = store.switchSession(m[1], m[2]);
+            if (!ok)
+                return json(res, 404, { error: "session not found" });
+            const bot = store.bot(m[1]);
+            broadcast({ kind: "bot", bot });
+            return json(res, 200, { bot: { ...bot, messages: store.messagesFor(bot.threadId) } });
+        }
+        m = path.match(/^\/api\/bots\/([\w-]+)\/sessions\/([\w-]+)$/);
+        if (m && method === "DELETE") {
+            const ok = store.deleteSession(m[1], m[2]);
+            if (!ok)
+                return json(res, 404, { error: "cannot delete session" });
+            const bot = store.bot(m[1]);
+            broadcast({ kind: "bot", bot });
+            broadcast({ kind: "bot.deleted", botId: m[1] });
+            return json(res, 200, { ok: true, bot: { ...bot, messages: store.messagesFor(bot.threadId) } });
         }
         // identity handshake for the packaged app's port fallback: the forked
         // child proves it is OURS by echoing its pid (a stray dev server has

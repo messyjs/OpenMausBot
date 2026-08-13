@@ -136,8 +136,9 @@ function StreamingBubble({ text }: { text: string }) {
   );
 }
 
-export function ChatView({ bot }: { bot: Bot }) {
+export function ChatView({ bot, isSecondary }: { bot: Bot; isSecondary?: boolean }) {
   const { state, dispatch } = useStore();
+  const secSession = isSecondary ? state.bots.find((b) => b.id === state.secondarySession?.botId)?.sessions?.find((s) => s.id === state.secondarySession?.sessionId) : null;
   const scrollRef = useRef<HTMLDivElement>(null);
 
   const streaming = state.streaming[bot.threadId];
@@ -152,6 +153,12 @@ export function ChatView({ bot }: { bot: Bot }) {
 
   return (
     <main className="relative flex h-full min-w-0 flex-1 flex-col bg-app">
+      {isSecondary && (
+        <div className="flex items-center justify-between border-b border-hairline/40 bg-panel px-3 py-1.5">
+          <div className="flex items-center gap-2 text-[12px] text-ink-secondary"><span className="font-medium text-ink">{bot.name}</span><span>/</span><span>{secSession?.title ?? "Session"}</span></div>
+          <button onClick={() => dispatch({ type: "setSecondarySession", session: null })} className="rounded-md p-1 text-ink-secondary hover:bg-raised hover:text-ink" title="Close"><X size={14} /></button>
+        </div>
+      )}
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-3">
         <button

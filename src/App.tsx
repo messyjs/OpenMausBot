@@ -20,7 +20,40 @@ function Shell() {
     <div className="relative flex h-full">
       <Sidebar />
       {bot ? (
-        <ChatView bot={bot} />
+        <div className="flex h-full min-w-0 flex-1 flex-col">
+          {/* Primary chat (top pane) */}
+          <div style={{ height: state.secondarySession ? state.splitPosition + "%" : "100%" }} className="min-h-0 overflow-hidden">
+            <ChatView bot={bot} />
+          </div>
+          {/* Draggable divider */}
+          {state.secondarySession && (
+            <div
+              onMouseDown={(e) => {
+                e.preventDefault();
+                const onMove = (ev: MouseEvent) => {
+                  const container = (e.target as HTMLElement).parentElement;
+                  if (!container) return;
+                  const rect = container.getBoundingClientRect();
+                  const pct = Math.max(5, Math.min(95, ((ev.clientY - rect.top) / rect.height) * 100));
+                  dispatch({ type: "setSplitPosition", position: pct });
+                };
+                const onUp = () => { document.removeEventListener("mousemove", onMove); document.removeEventListener("mouseup", onUp); };
+                document.addEventListener("mousemove", onMove);
+                document.addEventListener("mouseup", onUp);
+              }}
+              className="h-1.5 shrink-0 cursor-row-resize bg-hairline/40 hover:bg-accent/50 transition-colors"
+            />
+          )}
+          {/* Secondary chat (bottom pane) */}
+          {state.secondarySession && (
+            <div style={{ height: (100 - state.splitPosition) + "%" }} className="min-h-0 overflow-hidden border-t border-hairline/40">
+              {(() => {
+                const secBot = state.bots.find((b) => b.id === state.secondarySession!.botId);
+                return secBot ? <ChatView bot={secBot} isSecondary /> : null;
+              })()}
+            </div>
+          )}
+        </div>
       ) : (
         <main className="flex h-full min-w-0 flex-1 flex-col items-center justify-center gap-3 bg-app text-ink-secondary">
           <Loader2 size={20} className="animate-spin" />
