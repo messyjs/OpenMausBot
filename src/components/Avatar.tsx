@@ -135,8 +135,8 @@ export const MausAvatar = memo(function MausAvatar({
         <path d={"M"+bx1+" "+by1+" L"+bx2+" "+by1+" L"+(bx2+3)+" "+(foldY+2)+" Q"+((bx2+bx1)/2)+" "+(foldY+8)+" "+(bx1-3)+" "+(foldY+2)+" Z"} fill={"url(#"+gid+")"} stroke={dark} strokeWidth="1.5" />
         <path d={"M"+(bx1-2)+" "+(foldY+1)+" Q"+((bx2+bx1)/2)+" "+(foldY+7)+" "+(bx2+2)+" "+(foldY+1)} fill="none" stroke={dark} strokeWidth="0.8" opacity="0.4" />
 
-        <Eye cx={45} cy={foldY-4} rx={11} ry={7} expression={expression} side="l" />
-        <Eye cx={75} cy={foldY-4} rx={11} ry={7} expression={expression} side="r" />
+        <Eye cx={45} cy={foldY-4} rx={7} ry={11} expression={expression} side="l" />
+        <Eye cx={75} cy={foldY-4} rx={7} ry={11} expression={expression} side="r" />
         <Mouth cx={60} cy={foldY+14} expression={expression} />
       </g>
     </svg>
