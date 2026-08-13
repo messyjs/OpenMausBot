@@ -312,6 +312,34 @@ async function startTurn(botId: string, text: string, opts?: { commsDepth?: numb
 
   const userMessage = store.appendMessage(bot.threadId, { role: "user", kind: "text", text });
   broadcast({ kind: "message", threadId: bot.threadId, message: userMessage });
+  // First-message custom description: if the bot has no user messages yet
+  // and the text doesn't match any onboarding option, save it as the bot's
+  // description/persona instead of sending it to the LLM
+  const userMessages = store.messagesFor(bot.threadId).filter((m) => m.role === "user");
+  if (userMessages.length <= 1 && !bot.description && !bot.title) {
+    const options = ["Work & projects", "Writing & research", "Life admin", "A bit of everything"];
+    const isOption = options.some((o) => text.toLowerCase().trim() === o.toLowerCase());
+    if (!isOption && text.length > 2 && text.length < 200) {
+      // Save as the bot's description and title
+      const title = text.length > 40 ? text.slice(0, 40) + "..." : text;
+      store.patchBot(botId, { description: text, title });
+      broadcast({ kind: "bot", bot: store.bot(botId) });
+      // Replace the user message with a friendly confirmation
+      store.patchMessage(bot.threadId, userMessage.id, {
+        role: "user", kind: "text", text: text,
+      });
+      broadcast({ kind: "message", threadId: bot.threadId, message: userMessage });
+      const confirm = store.appendMessage(bot.threadId, {
+        role: "bot", kind: "text",
+        text: `Got it — I'm now your ${title} bot. What would you like to work on?`,
+      });
+      broadcast({ kind: "message", threadId: bot.threadId, message: confirm });
+      store.patchBot(bot.id, { busy: false });
+      broadcast({ kind: "bot", bot: store.bot(bot.id) });
+      return;
+    }
+  }
+
 
   // transcript for API-backed drivers: settled text turns only
   const transcript = store
