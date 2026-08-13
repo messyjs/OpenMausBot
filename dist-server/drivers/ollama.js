@@ -173,34 +173,76 @@ export const OllamaDriver = {
             emit({ ...base(threadId, turnId), type: "session.started", sessionId: null, model });
             (async () => {
                 try {
-                    const { text, usage } = await complete(messages, model, {
-                        stream: true,
-                        signal: abort.signal,
-                        onDelta: (delta) => emit({ ...base(threadId, turnId), type: "content.delta", streamKind: "assistant_text", delta }),
-                    });
-                    appendNative(threadId, { dir: "in", source: "ollama.chat", msg: { text, usage } });
-                    if (text.trim()) {
-                        emit({ ...base(threadId, turnId), type: "item.completed", itemType: "assistant_text", text });
+                    const executors = turn.integrations?.botTools?.executors;
+                    const toolDefs = turn.integrations?.botTools?.tools;
+                    let convMsgs = [...messages];
+                    let finalText = "";
+                    let finalUsage = null;
+                    const MAX_TOOL_ROUNDS = 10;
+                    const tcS = String.fromCharCode(60) + "tool_call" + String.fromCharCode(62);
+                    const tcE = String.fromCharCode(60) + "/tool_call" + String.fromCharCode(62);
+                    const tcR = new RegExp(tcS + String.fromCharCode(92) + "s" + String.fromCharCode(92) + "S" + String.fromCharCode(93) + "*?" + tcE, "g");
+                    for (let round = 0; round <= MAX_TOOL_ROUNDS; round++) {
+                        let roundMsgs = convMsgs;
+                        if (round === 0 && toolDefs && toolDefs.length > 0) {
+                            const tl = toolDefs.map((t) => "- " + t.function.name + ": " + t.function.description).join(String.fromCharCode(10));
+                            const ex = tcS + String.fromCharCode(10) + JSON.stringify({ name: "execute_command", arguments: { command: "notepad.exe" } }) + String.fromCharCode(10) + tcE;
+                            const ti = String.fromCharCode(10) + String.fromCharCode(10) + "You have access to these tools:" + String.fromCharCode(10) + tl + String.fromCharCode(10) + String.fromCharCode(10) + "To use a tool, output a tool_call block in this format:" + String.fromCharCode(10) + ex + String.fromCharCode(10) + "You can make multiple tool calls. After tool results are provided, continue based on the results.";
+                            roundMsgs = [{ role: "system", content: (turn.system || "") + ti }, ...convMsgs.slice(1)];
+                        }
+                        const result = await complete(roundMsgs, model, {
+                            stream: true, signal: abort.signal,
+                            onDelta: (delta) => emit({ ...base(threadId, turnId), type: "content.delta", streamKind: "assistant_text", delta }),
+                        });
+                        finalText = result.text;
+                        finalUsage = result.usage;
+                        const matches = finalText.match(tcR);
+                        const nativeCalls = result.toolCalls || [];
+                        if ((!matches || matches.length === 0) && nativeCalls.length === 0)
+                            break;
+                        if (!executors)
+                            break;
+                        const calls = [];
+                        for (const m of (matches || [])) {
+                            try {
+                                const j = JSON.parse(m.replace(new RegExp(tcS + "|" + tcE, "g"), "").trim());
+                                calls.push({ name: j.name || "", args: j.arguments || {} });
+                            }
+                            catch { }
+                        }
+                        for (const tc of nativeCalls) {
+                            try {
+                                calls.push({ name: tc.name, args: JSON.parse(tc.arguments) });
+                            }
+                            catch {
+                                calls.push({ name: tc.name, args: {} });
+                            }
+                        }
+                        if (calls.length === 0)
+                            break;
+                        finalText = finalText.replace(tcR, "").trim();
+                        for (const call of calls) {
+                            emit({ ...base(threadId, turnId), type: "item.started", itemType: "tool", title: call.name });
+                            const fn = executors[call.name];
+                            const tr = fn ? await fn(call.args) : "Error: unknown tool " + call.name;
+                            emit({ ...base(threadId, turnId), type: "item.completed", itemType: "tool", ok: !tr.startsWith("Error") });
+                            convMsgs = [...convMsgs, { role: "assistant", content: tcS + String.fromCharCode(10) + JSON.stringify({ name: call.name, arguments: call.args }) + String.fromCharCode(10) + tcE }, { role: "user", content: "Tool result: " + tr }];
+                        }
                     }
-                    if (usage) {
-                        emit({ ...base(threadId, turnId), type: "thread.token-usage.updated", ...usage });
-                    }
+                    appendNative(threadId, { dir: "in", source: "ollama.chat", msg: { text: finalText, usage: finalUsage } });
+                    if (finalText.trim())
+                        emit({ ...base(threadId, turnId), type: "item.completed", itemType: "assistant_text", text: finalText });
+                    if (finalUsage)
+                        emit({ ...base(threadId, turnId), type: "thread.token-usage.updated", ...finalUsage });
                     active.delete(threadId);
                     emit({ ...base(threadId, turnId), type: "turn.completed", ok: true, stopReason: null, cost: null });
                 }
                 catch (e) {
                     active.delete(threadId);
                     const aborted = e.name === "AbortError";
-                    if (!aborted) {
+                    if (!aborted)
                         emit({ ...base(threadId, turnId), type: "runtime.error", message: e.message });
-                    }
-                    emit({
-                        ...base(threadId, turnId),
-                        type: "turn.completed",
-                        ok: false,
-                        stopReason: aborted ? "interrupted" : "error",
-                        cost: null,
-                    });
+                    emit({ ...base(threadId, turnId), type: "turn.completed", ok: false, stopReason: aborted ? "interrupted" : "error", cost: null });
                 }
             })();
             return { turnId };
