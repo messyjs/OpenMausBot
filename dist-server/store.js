@@ -118,7 +118,7 @@ export class Store {
         this.appendMessage(bot.threadId, {
             role: "bot",
             kind: "text",
-            text: "Hey — I'm your new bot. Nice to meet you.",
+            text: "Hey there. I'm your bot. Don't forget to bring a towel.",
         });
         this.appendMessage(bot.threadId, { role: "bot", kind: "options", card: onboardingCard() });
         return bot;
@@ -156,6 +156,6 @@ export class Store {
         if (this.bots.length)
             return;
         const bot = this.createBot();
-        this.patchBot(bot.id, { name: "Milind", color: "purple" });
+        this.patchBot(bot.id, { name: "Towelie", color: "purple" });
     }
 }
