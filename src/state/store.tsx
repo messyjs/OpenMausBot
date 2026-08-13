@@ -60,6 +60,10 @@ export interface Bot {
   computer?: "cloud" | "local" | "network" | "off";
   /** When computer is "network", which device to use. */
   deviceId?: string;
+  /** Enable Python code execution for this bot. */
+  pythonEnabled?: boolean;
+  /** Use compressed/secret language for inter-bot communication. */
+  compressedComms?: boolean;
   pinned?: boolean;
   hidden?: boolean;
   messages: Message[];
@@ -165,7 +169,7 @@ type Action =
       patch: Partial<
         Pick<
           Bot,
-          "name" | "title" | "description" | "notifications" | "computer" | "deviceId" | "color" | "mascotExpression" | "pinned" | "hidden"
+          "name" | "title" | "description" | "notifications" | "computer" | "deviceId" | "color" | "pythonEnabled" | "compressedComms" | "mascotExpression" | "pinned" | "hidden"
         >
       >;
     };

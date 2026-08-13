@@ -579,7 +579,7 @@ const server = createServer(async (req, res) => {
         if (m && method === "PATCH") {
             const body = await readBody(req);
             const patch = {};
-            for (const key of ["name", "title", "description", "notifications", "modelSelection", "unread", "computer", "deviceId", "color", "mascotExpression", "pinned", "hidden"]) {
+            for (const key of ["name", "title", "description", "notifications", "modelSelection", "unread", "computer", "deviceId", "color", "mascotExpression", "pinned", "hidden", "pythonEnabled", "compressedComms"]) {
                 if (body[key] !== undefined)
                     patch[key] = body[key];
             }
