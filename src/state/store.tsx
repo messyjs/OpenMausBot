@@ -130,7 +130,7 @@ interface AppState {
   connected: boolean;
   /** Director mode: messages route to Towelie who delegates to specialists */
   /** Chat mode: "single" (direct with one bot), "director" (director routes), "group" (director picks bots) */
-  chatMode: "single" | "director" | "group";
+  chatMode: "single" | "director" | "group" | "fusion";
   /** Which bot is the director (defaults to Towelie) */
   directorId: string | null;
   /** Bots enabled for multi/director mode */
@@ -179,10 +179,11 @@ type Action =
   | { type: "toggleComputer"; open?: boolean }
   | { type: "toggleAppSettings"; open?: boolean }
   | { type: "previewMascotMotion"; botId: string; kind: Exclude<MausMotion, "none"> }
-  | { type: "setChatMode"; mode: "single" | "director" | "group" }
+  | { type: "setChatMode"; mode: "single" | "director" | "group" | "fusion" }
   | { type: "setDirector"; botId: string }
   | { type: "toggleBotEnabled"; botId: string }
   | { type: "toggleBotCollapsed"; botId: string }
+  | { type: "newSession"; botId: string }
   | { type: "unlockSettings"; on: boolean }
   | { type: "toggleFavoriteModel"; modelKey: string }
   | {
@@ -582,6 +583,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         }
         case "deleteBot":
           api(`/api/bots/${action.botId}`, { method: "DELETE" }).catch(showError);
+          break;
+        case "newSession":
+          api(`/api/bots/${action.botId}/new-session`, { method: "POST" })
+            .then(({ bot }) => rawDispatch({ type: "hydrate", bots: stateRef.current.bots.map((b) => b.id === bot.id ? bot : b) }))
+            .catch(showError);
           break;
         case "markUnread":
           api(`/api/bots/${action.botId}`, { method: "PATCH", body: JSON.stringify({ unread: true }) }).catch(

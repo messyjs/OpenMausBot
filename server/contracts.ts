@@ -109,6 +109,8 @@ export interface SendTurnInput {
      * through the harness so this bot can message other bots. The harness
      * owns turns, permissions, and recursion limits; the proxy only forwards. */
     agents?: { command: string; args: string[]; env: Record<string, string> };
+    /** Fusion mode flag for director system prompt */
+    fusionMode?: boolean;
     botTools?: { tools: import("./bot-tools.ts").ToolDef[]; executors: Record<string, import("./bot-tools.ts").ToolExecutor> };
   };
   cwd?: string;

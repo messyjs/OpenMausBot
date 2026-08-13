@@ -34,6 +34,7 @@ function ChatModeToggle() {
     { id: "single", label: "Single", icon: MessageSquare, desc: "Chat directly with one bot" },
     { id: "director", label: "Director", icon: Users, desc: "Director routes to selected bots" },
     { id: "group", label: "Group", icon: Users, desc: "Director picks bots automatically" },
+    { id: "fusion", label: "Fusion", icon: Users, desc: "Enhanced prompt + sequential cascade + judge synthesis" },
   ] as const;
   return (
     <div className="flex gap-1 px-2 py-1.5 border-b border-hairline/40">
@@ -177,6 +178,7 @@ function BotContextMenu({ menu, onClose }: { menu: MenuState; onClose: () => voi
       {item(bot.pinned ? <PinOff size={16} className="text-ink-secondary" /> : <Pin size={16} className="text-ink-secondary" />, bot.pinned ? "Unpin" : "Pin", () => dispatch({ type: "updateBot", botId: bot.id, patch: { pinned: !bot.pinned } }))}
       {item(<Settings size={16} className="text-ink-secondary" />, "Settings", () => dispatch({ type: "toggleSettings", open: true }), { hint: "Open bot settings" })}
       {item(<Users size={16} className="text-ink-secondary" />, "Set as Director", () => dispatch({ type: "setDirector", botId: bot.id }))}
+      {item(<Plus size={16} className="text-ink-secondary" />, "New Session", () => dispatch({ type: "newSession", botId: bot.id }))}
       <div className="mx-2 my-1 border-t border-hairline/40" />
       {item(<Trash2 size={16} />, "Delete", () => dispatch({ type: "deleteBot", botId: bot.id }), { danger: true })}
     </div>

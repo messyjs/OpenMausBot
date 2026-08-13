@@ -122,7 +122,7 @@ export function mentionedBots<T extends { name: string; hidden?: boolean }>(text
   return found;
 }
 
-const onboardingCard = (): OptionCardData => ({
+export const onboardingCard = (): OptionCardData => ({
   title: "What do you mostly want help with?",
   subtitle: "Pick whatever's closest; we can always expand from there.",
   options: ["Work & projects", "Writing & research", "Life admin", "A bit of everything"],
@@ -210,6 +210,11 @@ export class Store {
     });
     this.appendMessage(bot.threadId, { role: "bot", kind: "options", card: onboardingCard() });
     return bot;
+  }
+
+  clearMessages(threadId: string) {
+    this.messages.set(threadId, []);
+    this.saveBots();
   }
 
   deleteBot(id: string): boolean {

@@ -39,7 +39,7 @@ export function mentionedBots(text, peers) {
     }
     return found;
 }
-const onboardingCard = () => ({
+export const onboardingCard = () => ({
     title: "What do you mostly want help with?",
     subtitle: "Pick whatever's closest; we can always expand from there.",
     options: ["Work & projects", "Writing & research", "Life admin", "A bit of everything"],
@@ -122,6 +122,10 @@ export class Store {
         });
         this.appendMessage(bot.threadId, { role: "bot", kind: "options", card: onboardingCard() });
         return bot;
+    }
+    clearMessages(threadId) {
+        this.messages.set(threadId, []);
+        this.saveBots();
     }
     deleteBot(id) {
         const bot = this.bot(id);

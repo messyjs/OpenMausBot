@@ -18,7 +18,7 @@ import type { RuntimeEvent } from "./contracts.ts";
 import { BUILT_IN_DRIVERS } from "./drivers/builtIn.ts";
 import { EventBus } from "./harness/bus.ts";
 import { ProviderRegistry } from "./harness/registry.ts";
-import { mentionedBots, Store, type Message } from "./store.ts";
+import { mentionedBots, Store, onboardingCard, type Message } from "./store.ts";
 
 
 // Towelie's default personality — a genius in disguise.
@@ -399,6 +399,8 @@ async function startTurn(botId: string, text: string, opts?: { commsDepth?: numb
         store.bots.filter((b) => b.id !== bot.id && !b.hidden).length > 0
       ) {
         integrations.agents = agentsIntegration(bot.id, commsDepth);
+        // Pass fusion mode flag to the director system prompt
+        if (bot.title && /director/i.test(bot.title)) integrations.fusionMode = true;
       }
       // Bot tool calling: give Ollama bots access to shell, file, device, and memory tools
       if (instance.driverKind === "ollama") {
@@ -438,7 +440,7 @@ async function startTurn(botId: string, text: string, opts?: { commsDepth?: numb
           (integrations.agents
             ? " You can work with the user's other bots through the agents tools — list_bots shows who's available, ask_bot sends one of them a message and returns their reply." +
               (bot.title && /director/i.test(bot.title)
-                ? " You are the DIRECTOR. The user talks to you, and you delegate tasks to specialist bots using ask_bot. Synthesize their responses into a clear answer for the user. Available specialists: " + store.bots.filter((b) => b.id !== bot.id && !b.hidden).map((b) => b.name + " (" + (b.title || "general") + ")").join(", ") + "."
+                ? " You are the DIRECTOR. The user talks to you, and you delegate tasks to specialist bots using ask_bot. Synthesize their responses into a clear answer for the user. Available specialists: " + store.bots.filter((b) => b.id !== bot.id && !b.hidden).map((b) => b.name + " (" + (b.title || "general") + ")").join(", ") + "." + (integrations.fusionMode ? " FUSION MODE: First enhance the user prompt. Then call each specialist IN SEQUENCE (cascade) so each bot builds on the previous one. Finally synthesize and quality-check the result. Sequential only, not parallel." : "")
                 : "")
             : "") +
           (bot.compressedComms && integrations.agents
@@ -687,6 +689,17 @@ const server = createServer(async (req, res) => {
       const instance = registry.get(bot.modelSelection.instanceId);
       await instance?.adapter.interruptTurn(bot.threadId);
       return json(res, 200, { ok: true });
+    }
+    m = path.match(/^\/api\/bots\/([\w-]+)\/new-session\$/);
+    if (m && method === "POST") {
+      const bot = store.bot(m[1]);
+      if (!bot) return json(res, 404, { error: "no such bot" });
+      // Clear messages and create a fresh welcome
+      store.clearMessages(bot.threadId);
+      store.appendMessage(bot.threadId, { role: "bot", kind: "text", text: "New session started. What would you like to work on?" });
+      store.appendMessage(bot.threadId, { role: "bot", kind: "options", card: onboardingCard() });
+      broadcast({ kind: "bot", bot: store.bot(bot.id) });
+      return json(res, 200, { bot: { ...store.bot(bot.id)!, messages: store.messagesFor(bot.threadId) } });
     }
 
     // identity handshake for the packaged app's port fallback: the forked
