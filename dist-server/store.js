@@ -9,11 +9,9 @@ import { newId } from "./contracts.js";
 const BOTS_FILE = join(DATA_DIR, "bots.json");
 const messagesFile = (threadId) => join(DATA_DIR, `messages-${threadId}.json`);
 const COLORS = [
-    "green",
     "blue",
     "red",
     "orange",
-    "purple",
     "cyan",
     "pink",
     "yellow",
@@ -158,6 +156,6 @@ export class Store {
         if (this.bots.length)
             return;
         const bot = this.createBot();
-        this.patchBot(bot.id, { name: "Milind", color: "blue" });
+        this.patchBot(bot.id, { name: "Milind", color: "purple" });
     }
 }

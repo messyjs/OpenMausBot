@@ -82,11 +82,11 @@ const BOTS_FILE = join(DATA_DIR, "bots.json");
 const messagesFile = (threadId: string) => join(DATA_DIR, `messages-${threadId}.json`);
 
 const COLORS: MausColor[] = [
-  "green",
+
   "blue",
   "red",
   "orange",
-  "purple",
+
   "cyan",
   "pink",
   "yellow",
@@ -235,6 +235,6 @@ export class Store {
   seedIfEmpty() {
     if (this.bots.length) return;
     const bot = this.createBot();
-    this.patchBot(bot.id, { name: "Milind", color: "blue" });
+    this.patchBot(bot.id, { name: "Milind", color: "purple" });
   }
 }
