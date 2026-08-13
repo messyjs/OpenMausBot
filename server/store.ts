@@ -72,6 +72,12 @@ export interface BotRecord {
   /** which computer the bot acts on: its cloud box, this Mac (local CUA),
    * or none. Unset = auto (box when it exists, else local when available). */
   computer?: "cloud" | "local" | "off";
+  /** When computer is "network", which device to use. */
+  deviceId?: string;
+  /** Enable Python code execution for this bot. */
+  pythonEnabled?: boolean;
+  /** Use compressed/secret language for inter-bot communication. */
+  compressedComms?: boolean;
   pinned?: boolean;
   hidden?: boolean;
   busy?: boolean;

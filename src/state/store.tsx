@@ -124,6 +124,8 @@ interface AppState {
   /** bots whose cloud computer is being provisioned */
   provisioning: Record<string, boolean>;
   connected: boolean;
+  /** Director mode: messages route to Towelie who delegates to specialists */
+  directorMode: boolean;
   error: string | null;
   mascotMotion: {
     botId: string;
@@ -163,6 +165,7 @@ type Action =
   | { type: "toggleComputer"; open?: boolean }
   | { type: "toggleAppSettings"; open?: boolean }
   | { type: "previewMascotMotion"; botId: string; kind: Exclude<MausMotion, "none"> }
+  | { type: "toggleDirector"; on: boolean }
   | {
       type: "updateBot";
       botId: string;
@@ -369,6 +372,8 @@ function reducer(state: AppState, action: Action): AppState {
     }
     case "previewMascotMotion":
       return withMascotMotion(state, action.botId, action.kind);
+    case "toggleDirector":
+      return { ...state, directorMode: action.on };
     case "updateBot": {
       const mascotChanged =
         Object.prototype.hasOwnProperty.call(action.patch, "color") ||
@@ -404,6 +409,7 @@ const initialState: AppState = {
   screens: {},
   provisioning: {},
   connected: false,
+  directorMode: false,
   error: null,
   mascotMotion: null,
 };
@@ -449,12 +455,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     const wrapped: React.Dispatch<Action> = (action) => {
       rawDispatch(action);
       switch (action.type) {
-        case "send":
-          api(`/api/bots/${action.botId}/messages`, {
+        case "send": {
+          // Director mode: route to Towelie (facilitator) who delegates to specialists
+          let targetBotId = action.botId;
+          if (stateRef.current.directorMode) {
+            const towelie = stateRef.current.bots.find((b) => b.name === "Towelie" || b.title === "Director" || b.title === "Director & Facilitator");
+            if (towelie) targetBotId = towelie.id;
+          }
+          api(`/api/bots/${targetBotId}/messages`, {
             method: "POST",
             body: JSON.stringify({ text: action.text }),
           }).catch(showError);
           break;
+        }
         case "answerCard": {
           const bot = stateRef.current.bots.find((b) => b.id === action.botId);
           const card = bot?.messages.find((m) => m.id === action.messageId)?.card;

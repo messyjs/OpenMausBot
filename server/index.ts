@@ -349,7 +349,7 @@ async function startTurn(botId: string, text: string, opts?: { commsDepth?: numb
     .map((m) => ({ role: m.role === "user" ? ("user" as const) : ("assistant" as const), text: m.text! }));
 
   const persona = [
-    `You are ${bot.name}, a personal bot in OpenMausBot.`,
+    `You are ${bot.name}, a personal bot in Towelie Bot.`,
     bot.title && `Role: ${bot.title}.`,
     bot.description && `About: ${bot.description}`,
   ]
@@ -422,7 +422,13 @@ async function startTurn(botId: string, text: string, opts?: { commsDepth?: numb
               ? " You can act on the user's computer through the computer tools — take a screenshot or read the desktop state first, prefer accessibility actions over raw coordinates, and act carefully."
               : "") +
           (integrations.agents
-            ? " You can work with the user's other bots through the agents tools — list_bots shows who's available, ask_bot sends one of them a message and returns their reply."
+            ? " You can work with the user's other bots through the agents tools — list_bots shows who's available, ask_bot sends one of them a message and returns their reply." +
+              (bot.title && /director/i.test(bot.title)
+                ? " You are the DIRECTOR. The user talks to you, and you delegate tasks to specialist bots using ask_bot. Synthesize their responses into a clear answer for the user. Available specialists: " + store.bots.filter((b) => b.id !== bot.id && !b.hidden).map((b) => b.name + " (" + (b.title || "general") + ")").join(", ") + "."
+                : "")
+            : "") +
+          (bot.compressedComms && integrations.agents
+            ? " When communicating with other bots via ask_bot, use compressed shorthand to save tokens — be brief and efficient in inter-bot messages."
             : "") +
           (tagged.length
             ? ` The user tagged ${tagged
