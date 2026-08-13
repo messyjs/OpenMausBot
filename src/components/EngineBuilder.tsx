@@ -12,6 +12,7 @@ export function EngineBuilder({ onClose }: { onClose: () => void }) {
   const [enhance, setEnhance] = useState(false);
   const [instanceId, setInstanceId] = useState("ollamaLocal");
   const [model, setModel] = useState("");
+  const [extraContext, setExtraContext] = useState("");
   const [saved, setSaved] = useState(false);
   const ollamaInstances = state.instances.filter((i) => i.driverKind === "ollama" && i.snapshot.state === "available");
   const selectedInstance = ollamaInstances.find((i) => i.instanceId === instanceId);
@@ -20,7 +21,7 @@ export function EngineBuilder({ onClose }: { onClose: () => void }) {
     if (!subject.trim() || loading) return;
     setLoading(true); setSaved(false);
     api("/api/engines/build", {
-      method: "POST", body: JSON.stringify({ subject: subject.trim(), enhance, instanceId, model: model || selectedInstance?.models.default || "" }),
+      method: "POST", body: JSON.stringify({ subject: subject.trim(), enhance, instanceId, model: model || selectedInstance?.models.default || "", extraContext }),
     })
       .then((data: any) => { setEngine(data.engine || ""); setLoading(false); })
       .catch((e) => { setEngine("Error: " + e.message); setLoading(false); });
@@ -79,6 +80,12 @@ export function EngineBuilder({ onClose }: { onClose: () => void }) {
                 </select>
               </div>
             )}
+          </div>
+
+          {/* Additional context / equations */}
+          <div className="mb-4">
+            <div className="mb-1.5 text-[13px] text-ink-secondary">Additional knowledge (optional — equations, methods, quotes, anything not on Wikipedia)</div>
+            <textarea className={cn(inputCls, "h-[100px] resize-none")} value={extraContext} onChange={(e) => setExtraContext(e.target.value)} placeholder="e.g. Gann Square of 9 formula, Gann Angles (1x1=45deg, 2x1=63.75deg), Time-Price Squaring equation..." />
           </div>
 
           {/* Engine output */}

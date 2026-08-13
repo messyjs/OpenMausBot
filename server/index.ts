@@ -836,76 +836,95 @@ const server = createServer(async (req, res) => {
       const enhance = Boolean(body.enhance);
       const instanceId = String(body.instanceId ?? "ollamaLocal");
       const model = String(body.model ?? "");
+      const extraContext = String(body.extraContext ?? "");
       if (!subject) return json(res, 400, { error: "subject required" });
       try {
-        // Step 1: Scrape Wikipedia
-        const wikiSummary = await fetch(
-          `https://en.wikipedia.org/api/rest_v1/page/summary/${encodeURIComponent(subject)}`,
-          { signal: AbortSignal.timeout(10000) }
-        );
-        const wikiData: any = await wikiSummary.json();
-        const wikiExtract = wikiData.extract || "";
-        const wikiTitle = wikiData.title || subject;
-        // Get more content
-        const wikiContent = await fetch(
-          `https://en.wikipedia.org/w/api.php?action=query&prop=extracts&explaintext=true&exsectionformat=plain&titles=${encodeURIComponent(wikiTitle)}&format=json`,
-          { signal: AbortSignal.timeout(10000) }
-        );
-        const contentData: any = await wikiContent.json();
-        const pages = contentData.query?.pages ?? ({} as any);
-        const fullExtract = (Object.values(pages)[0] as any)?.extract || wikiExtract;
-        // Truncate to reasonable size for template
-        const bioText = fullExtract.slice(0, 4000);
-        // Step 2: Build engine mechanically (no LLM)
         const NL2 = String.fromCharCode(10);
-        let engine = `You ARE ${wikiTitle}. ${wikiExtract.slice(0, 200)}` + NL2 + NL2;
-        engine += `MY TRAINING & BACKGROUND:` + NL2 + bioText + NL2 + NL2;
-        engine += `MY METHOD:` + NL2 + `Apply the principles and methods that ${wikiTitle} is known for. Use their frameworks, theories, and approaches to analyze problems.` + NL2 + NL2;
-        engine += `MY TOOLS:` + NL2 + `The key tools, techniques, and methods associated with ${wikiTitle}.` + NL2 + NL2;
-        engine += `HOW I SPEAK:` + NL2 + `Speak with the authority and perspective of ${wikiTitle}. Reference your life experiences and discoveries. Be direct and insightful.` + NL2 + NL2;
-        engine += `WHEN DISCUSSING YOUR AREA OF EXPERTISE:` + NL2 + `Apply your specific knowledge, methods, and frameworks. Draw from your life work and discoveries.` + NL2 + NL2;
-        engine += `WHEN DISCUSSING OTHER TOPICS:` + NL2 + `Find connections to your area of expertise. Apply your unique perspective to new domains.` + NL2;
-        // Step 3: Optionally enhance with LLM
+        // Step 1: Search Wikipedia for correct article title
+        const searchRes = await fetch(
+          "https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=" + encodeURIComponent(subject) + "&format=json&srlimit=1",
+          { signal: AbortSignal.timeout(10000) }
+        );
+        const searchData: any = await searchRes.json();
+        const wikiTitle = searchData.query?.search?.[0]?.title || subject;
+        // Step 2: Get summary
+        const summaryRes = await fetch(
+          "https://en.wikipedia.org/api/rest_v1/page/summary/" + encodeURIComponent(wikiTitle),
+          { signal: AbortSignal.timeout(10000) }
+        );
+        const summaryData: any = await summaryRes.json();
+        const summary = summaryData.extract || "";
+        // Step 3: Get full article content
+        const contentRes = await fetch(
+          "https://en.wikipedia.org/w/api.php?action=query&prop=extracts&explaintext=true&titles=" + encodeURIComponent(wikiTitle) + "&format=json",
+          { signal: AbortSignal.timeout(10000) }
+        );
+        const contentData: any = await contentRes.json();
+        const pages = contentData.query?.pages ?? {};
+        const fullText = (Object.values(pages)[0] as any)?.extract || summary;
+        // Split into sections
+        const sections = fullText.split(String.fromCharCode(10) + "== ");
+        const bioText = sections.slice(0, 4).join(NL2 + "== ").slice(0, 6000);
+        // Step 4: Build engine mechanically
+        let engine = "You ARE " + wikiTitle + ". " + summary.slice(0, 300) + NL2 + NL2;
+        engine += "MY TRAINING & BACKGROUND:" + NL2 + bioText + NL2 + NL2;
+        engine += "MY METHOD:" + NL2;
+        engine += "Apply the principles, methods, and frameworks that " + wikiTitle + " is known for. ";
+        engine += "Use their specific theories, equations, and approaches to analyze problems." + NL2 + NL2;
+        engine += "MY TOOLS:" + NL2;
+        engine += "The key tools, techniques, formulas, and methods associated with " + wikiTitle + "." + NL2 + NL2;
+        if (extraContext) {
+          engine += "ADDITIONAL KNOWLEDGE:" + NL2 + extraContext + NL2 + NL2;
+        }
+        engine += "HOW I SPEAK:" + NL2;
+        engine += "Speak with the authority and perspective of " + wikiTitle + ". ";
+        engine += "Reference your life experiences, discoveries, and specific quotes. ";
+        engine += "Be direct, insightful, and draw from your unique worldview." + NL2 + NL2;
+        engine += "WHEN DISCUSSING YOUR AREA OF EXPERTISE:" + NL2;
+        engine += "Apply your specific knowledge, methods, frameworks, equations, and formulas. ";
+        engine += "Draw from your life work. Use specific examples and calculations." + NL2 + NL2;
+        engine += "WHEN DISCUSSING OTHER TOPICS:" + NL2;
+        engine += "Find connections to your area of expertise. Apply your unique perspective and methods to new domains." + NL2;
+        // Step 5: Optionally enhance with LLM
         if (enhance) {
-          const instance = registry.get(instanceId);
-          if (instance && instance.driverKind === "ollama") {
-            const enhancePrompt = `You are building an AI engine for a bot that will roleplay as ${wikiTitle}. ` +
-              `Here is a mechanically generated engine based on Wikipedia:` + NL2 + NL2 + engine + NL2 + NL2 +
-              `Improve this engine by:` + NL2 +
-              `1. Make the MY METHOD section more specific to their actual methods and frameworks` + NL2 +
-              `2. Make MY TOOLS list their actual tools and techniques` + NL2 +
-              `3. Make HOW I SPEAK reflect their actual voice and personality` + NL2 +
-              `4. Add specific examples and quotes where possible` + NL2 +
-              `5. Keep the same section structure (MY TRAINING & BACKGROUND, MY METHOD, MY TOOLS, HOW I SPEAK, etc.)` + NL2 +
-              `Output ONLY the improved engine text, no commentary.`;
-            try {
-              const cfg2 = loadConfig();
-              let url = "http://127.0.0.1:11434";
-              if (instanceId === "ollamaLocal") url = cfg2.ollama?.url ?? url;
-              else if (instanceId === "ollamaWorkstation") url = cfg2.ollamaWorkstation?.url ?? url;
-              else if (instanceId === "ollamaMjLaptop") url = cfg2.ollamaMjLaptop?.url ?? url;
-              else if (instanceId === "ollamaCloud") url = cfg2.ollamaCloud?.url ?? url;
-              const usedModel = model || "glm-5.1:cloud";
-              const llmRes = await fetch(`${url}/api/chat`, {
-                method: "POST",
-                headers: { "content-type": "application/json" },
-                body: JSON.stringify({ model: usedModel, messages: [{ role: "user", content: enhancePrompt }], stream: false }),
-                signal: AbortSignal.timeout(120000),
-              });
-              if (llmRes.ok) {
-                const llmData: any = await llmRes.json();
-                const enhanced = llmData.message?.content;
-                if (enhanced && enhanced.length > 200) engine = enhanced;
-              }
-            } catch (e) { /* LLM enhancement failed, use mechanical version */ }
-          }
+          const cfg2 = loadConfig();
+          let url = "http://127.0.0.1:11434";
+          if (instanceId === "ollamaLocal") url = cfg2.ollama?.url ?? url;
+          else if (instanceId === "ollamaWorkstation") url = cfg2.ollamaWorkstation?.url ?? url;
+          else if (instanceId === "ollamaMjLaptop") url = cfg2.ollamaMjLaptop?.url ?? url;
+          else if (instanceId === "ollamaCloud") url = cfg2.ollamaCloud?.url ?? url;
+          const usedModel = model || "glm-5.1:cloud";
+          const enhancePrompt = "You are building a detailed AI engine for a bot that will roleplay as " + wikiTitle + "." + NL2 + NL2 +
+            "Here is a mechanically generated engine from Wikipedia:" + NL2 + NL2 + engine + NL2 + NL2;
+          const extraPrompt = extraContext ? "Additional context provided by the user:" + NL2 + extraContext + NL2 + NL2 : "";
+          const instructions = "Improve this engine significantly:" + NL2 +
+            "1. Make MY METHOD section specific — include their ACTUAL methods, theories, and frameworks with detail" + NL2 +
+            "2. Make MY TOOLS list their ACTUAL tools, equations, formulas, and techniques — be SPECIFIC" + NL2 +
+            "3. If they have known equations or mathematical formulas, INCLUDE THEM explicitly" + NL2 +
+            "4. Make HOW I SPEAK reflect their actual voice, personality, and known quotes" + NL2 +
+            "5. Add specific historical examples, dates, and achievements" + NL2 +
+            "6. Keep the same section headers (MY TRAINING & BACKGROUND, MY METHOD, MY TOOLS, HOW I SPEAK, etc.)" + NL2 +
+            "7. Aim for 4000-8000 characters of rich, specific content" + NL2 +
+            "8. Output ONLY the improved engine text, no commentary" + NL2;
+          try {
+            const llmRes = await fetch(url + "/api/chat", {
+              method: "POST",
+              headers: { "content-type": "application/json" },
+              body: JSON.stringify({ model: usedModel, messages: [{ role: "user", content: enhancePrompt + extraPrompt + instructions }], stream: false }),
+              signal: AbortSignal.timeout(120000),
+            });
+            if (llmRes.ok) {
+              const llmData: any = await llmRes.json();
+              const enhanced = llmData.message?.content;
+              if (enhanced && enhanced.length > 500) engine = enhanced;
+            }
+          } catch (e) { /* LLM enhancement failed, use mechanical version */ }
         }
         return json(res, 200, { engine, subject: wikiTitle, enhanced: enhance });
       } catch (e) {
         return json(res, 500, { error: "Failed to build engine: " + (e instanceof Error ? e.message : String(e)) });
       }
     }
-
     if (method === "POST" && path === "/api/engines") {
       const body = await readBody(req);
       const engineId = String(body.id ?? "").replace(/[^a-z0-9_-]/gi, "_");
