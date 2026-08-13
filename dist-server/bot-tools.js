@@ -19,6 +19,12 @@ export function getMemoryTools() {
         { type: "function", function: { name: "recall", description: "Retrieve from memory by key, or list all keys if no key given.", parameters: { type: "object", properties: { key: { type: "string", description: "Memory key (omit to list all)" } }, required: [] } } },
     ];
 }
+export function getPythonTools() {
+    return [
+        { type: "function", function: { name: "execute_python", description: "Execute Python code and return the output. Code runs in a subprocess with a 30s timeout.", parameters: { type: "object", properties: { code: { type: "string", description: "Python code to execute" }, timeout: { type: "number", description: "Optional: timeout in ms (default 30000)" } }, required: ["code"] } } },
+        { type: "function", function: { name: "pip_install", description: "Install a Python package using pip.", parameters: { type: "object", properties: { package: { type: "string", description: "Package name (e.g. numpy, requests)" } }, required: ["package"] } } },
+    ];
+}
 export function getDeviceTools() {
     return [
         { type: "function", function: { name: "screenshot_device", description: "Capture a screenshot from a network device.", parameters: { type: "object", properties: { device_id: { type: "string", description: "Network device ID" } }, required: ["device_id"] } } },
@@ -28,6 +34,8 @@ export function getToolsForBot(opts) {
     const tools = [...getShellTools(), ...getMemoryTools()];
     if (opts.hasNetwork)
         tools.push(...getDeviceTools());
+    if (opts.pythonEnabled)
+        tools.push(...getPythonTools());
     return tools;
 }
 export function createToolExecutor(cfg, botDeviceId) {
@@ -159,6 +167,50 @@ export function createToolExecutor(cfg, botDeviceId) {
         }
         const keys = readdirSync(MEM_DIR).map(f => f.replace(".json", ""));
         return "Memory keys: " + keys.join(", ");
+    };
+    executors.execute_python = async (args) => {
+        const code = String(args.code ?? "");
+        const timeout = Number(args.timeout ?? 30000);
+        if (!code)
+            return "Error: no code provided";
+        try {
+            return new Promise((resolve) => {
+                const child = spawn("python", ["-c", code], { stdio: ["pipe", "pipe", "pipe"] });
+                let stdout = "", stderr = "";
+                child.stdout?.on("data", (d) => stdout += d.toString());
+                child.stderr?.on("data", (d) => stderr += d.toString());
+                const timer = setTimeout(() => { try {
+                    child.kill();
+                }
+                catch { } resolve(stdout + (stderr ? nl + "[stderr] " + stderr : "") + nl + "[timed out]"); }, timeout);
+                child.on("close", (code) => { clearTimeout(timer); resolve(stdout + (stderr ? nl + "[stderr] " + stderr : "") + nl + "[exit: " + code + "]"); });
+                child.on("error", (e) => { clearTimeout(timer); resolve("Error: " + e.message + " (is Python installed and in PATH?)"); });
+            });
+        }
+        catch (e) {
+            return "Error: " + e;
+        }
+    };
+    executors.pip_install = async (args) => {
+        const pkg = String(args.package ?? "");
+        if (!pkg)
+            return "Error: no package specified";
+        try {
+            return new Promise((resolve) => {
+                const child = spawn("pip", ["install", pkg], { stdio: ["pipe", "pipe", "pipe"] });
+                let stdout = "", stderr = "";
+                child.stdout?.on("data", (d) => stdout += d.toString());
+                child.stderr?.on("data", (d) => stderr += d.toString());
+                const timer = setTimeout(() => { try {
+                    child.kill();
+                }
+                catch { } resolve("Timed out installing " + pkg); }, 60000);
+                child.on("close", (code) => { clearTimeout(timer); resolve(stdout + (stderr ? nl + "[stderr] " + stderr : "") + nl + "[exit: " + code + "]"); });
+            });
+        }
+        catch (e) {
+            return "Error: " + e;
+        }
     };
     executors.screenshot_device = async (args) => {
         const devId = String(args.device_id ?? botDeviceId ?? "");

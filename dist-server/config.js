@@ -43,7 +43,7 @@ export function saveConfig(patch) {
         disk = JSON.parse(readFileSync(p, "utf8"));
     }
     catch { }
-    for (const key of ["xai", "composio", "box", "ollama", "ollamaWorkstation", "ollamaMjLaptop", "ollamaCloud", "profile", "devices", "settingsPassword"]) {
+    for (const key of ["xai", "composio", "box", "ollama", "ollamaWorkstation", "ollamaMjLaptop", "ollamaCloud", "profile", "devices", "settingsPassword", "favoriteModels"]) {
         if (patch[key] !== undefined) {
             if (Array.isArray(patch[key])) {
                 disk[key] = patch[key];

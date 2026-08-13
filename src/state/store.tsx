@@ -205,6 +205,7 @@ type Action =
   | { type: "deleteSession"; botId: string; sessionId: string }
   | { type: "setSplitPosition"; position: number }
   | { type: "setSecondarySession"; session: { botId: string; sessionId: string } | null }
+  | { type: "setFavorites"; favorites: string[] }
   | { type: "unlockSettings"; on: boolean }
   | { type: "toggleFavoriteModel"; modelKey: string }
   | {
@@ -430,12 +431,16 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, splitPosition: action.position };
     case "setSecondarySession":
       return { ...state, secondarySession: action.session };
+    case "setFavorites":
+      return { ...state, favoriteModels: action.favorites };
     case "unlockSettings":
       return { ...state, settingsUnlocked: action.on };
     case "toggleFavoriteModel": {
       const favs = state.favoriteModels.includes(action.modelKey)
         ? state.favoriteModels.filter((f) => f !== action.modelKey)
         : [...state.favoriteModels, action.modelKey];
+      // Persist to config
+      fetch("/api/config", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify({ favoriteModels: favs }) }).catch(() => {});
       return { ...state, favoriteModels: favs };
     }
     case "updateBot": {

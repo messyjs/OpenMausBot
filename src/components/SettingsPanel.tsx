@@ -1,4 +1,4 @@
-import { ChevronLeft, X } from "lucide-react";
+import { ChevronLeft, X, Upload } from "lucide-react";
 import { useStore, type Bot, type InstanceInfo } from "@/state/store";
 import { MausAvatar } from "./Avatar";
 import { expressionForBot, MAUS_COLORS, MAUS_COLOR_NAMES, MAUS_EXPRESSIONS, MAUS_MOTIONS } from "@/lib/mascot";
@@ -112,6 +112,26 @@ export function SettingsPanel({ bot }: { bot: Bot }) {
           <Field label="Name"><input className={inputCls} value={bot.name} onChange={(e) => patch({ name: e.target.value })} /></Field>
           <Field label="Title"><input className={inputCls} placeholder="What this agent does" value={bot.title} onChange={(e) => patch({ title: e.target.value })} /></Field>
           <div><div className="mb-1.5 flex items-center justify-between"><span className="text-[13px] text-ink-secondary">Description</span>{(bot.name === "Towelie" || /director/i.test(bot.title ?? "")) && (<button onClick={() => patch({ description: TOWELIE_PERSONALITY })} className="rounded-md bg-raised px-2 py-1 text-[11px] text-ink-secondary hover:bg-raised-hover hover:text-ink">Reset Personality</button>)}</div><textarea className={cn(inputCls, "min-h-[96px] resize-none")} placeholder="What this agent is for" value={bot.description} onChange={(e) => patch({ description: e.target.value })} /></div>
+          {/* Upload Engine */}
+          <div className="rounded-xl bg-card p-4">
+            <div className="text-[15px] font-medium text-ink">Engine</div>
+            <div className="mt-0.5 text-[13px] text-ink-secondary">Upload a custom engine/manifest file to define this bot's character, knowledge, and behavior.</div>
+            <div className="mt-3">
+              <label className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-hairline/50 py-2.5 text-[13px] text-ink-secondary hover:border-hairline hover:bg-raised/30">
+                <Upload size={15} /> Upload Engine File
+                <input type="file" className="hidden" accept=".txt,.md,.json,.yaml,.yml" onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  const reader = new FileReader();
+                  reader.onload = () => {
+                    fetch("/api/bots/upload-engine", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ botId: bot.id, name: file.name, content: reader.result as string }) })
+                      .then((r) => r.json()).then(() => { /* bot will update via SSE */ }).catch(() => {});
+                  };
+                  reader.readAsText(file);
+                }} />
+              </label>
+            </div>
+          </div>
           <OllamaAccountPicker bot={bot} instances={state.instances} onPick={(id) => { const inst = state.instances.find((i) => i.instanceId === id); if (inst) dispatch({ type: "setModel", botId: bot.id, selection: { instanceId: id, model: inst.models.default } }); }} />
           <div className="rounded-xl bg-card p-4">
             <div className="text-[15px] font-medium text-ink">Capabilities</div>

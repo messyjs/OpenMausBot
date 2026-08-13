@@ -405,7 +405,7 @@ async function startTurn(botId: string, text: string, opts?: { commsDepth?: numb
       // Bot tool calling: give Ollama bots access to shell, file, device, and memory tools
       if (instance.driverKind === "ollama") {
         const hasNetwork = bot.computer === "network" || !!bot.deviceId;
-        const botTools = getToolsForBot({ hasNetwork });
+        const botTools = getToolsForBot({ hasNetwork, pythonEnabled: !!bot.pythonEnabled });
         if (botTools.length > 0) {
           integrations.botTools = {
             tools: botTools,
@@ -480,6 +480,7 @@ function configStatus() {
     ollamaCloud: { configured: Boolean(cfg.ollamaCloud?.apiKey), url: cfg.ollamaCloud?.url ?? "https://api.ollama.com" },
     // not a secret — the sidebar shows it
     settingsPassword: { configured: Boolean(cfg.settingsPassword) },
+    favoriteModels: cfg.favoriteModels ?? [],
     profile: { name: cfg.profile?.name ?? "", email: cfg.profile?.email ?? "" },
   };
 }
@@ -614,6 +615,21 @@ const server = createServer(async (req, res) => {
       broadcast({ kind: "bot", bot: store.bot(bot.id) });
       return json(res, 201, { bot: { ...store.bot(bot.id)!, messages: store.messagesFor(bot.threadId) } });
     }
+    // Upload engine/manifest for a bot
+    if (method === "POST" && path === "/api/bots/upload-engine") {
+      const body = await readBody(req);
+      const botId = String(body.botId ?? "");
+      const engineContent = String(body.content ?? "");
+      const engineName = String(body.name ?? "Custom Engine");
+      const bot = store.bot(botId);
+      if (!bot) return json(res, 404, { error: "no such bot" });
+      // Append engine content to the bot description
+      const currentDesc = bot.description || "";
+      const engineSection = String.fromCharCode(10)+String.fromCharCode(10)+"[ENGINE: "+engineName+"]"+String.fromCharCode(10)+engineContent;
+      store.patchBot(botId, { description: currentDesc + engineSection });
+      broadcast({ kind: "bot", bot: store.bot(botId) });
+      return json(res, 200, { ok: true, bot: store.bot(botId) });
+    }
     let m = path.match(/^\/api\/bots\/([\w-]+)$/);
     if (m && method === "PATCH") {
       const body = await readBody(req);
@@ -737,7 +753,7 @@ const server = createServer(async (req, res) => {
     if ((method === "PUT" || method === "PATCH") && path === "/api/config") {
       const body = await readBody(req);
       const patch: Record<string, object> = {};
-      for (const key of ["xai", "composio", "box", "ollama", "ollamaWorkstation", "ollamaMjLaptop", "ollamaCloud", "profile", "settingsPassword"] as const) {
+      for (const key of ["xai", "composio", "box", "ollama", "ollamaWorkstation", "ollamaMjLaptop", "ollamaCloud", "profile", "settingsPassword", "favoriteModels"] as const) {
         if (body[key] && typeof body[key] === "object") patch[key] = body[key];
       }
       if (!Object.keys(patch).length) return json(res, 400, { error: "nothing to save" });
