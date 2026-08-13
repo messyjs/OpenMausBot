@@ -10,10 +10,20 @@ import { PluginsPanel } from "@/components/PluginsPanel";
 import { ComputerPanel } from "@/components/ComputerPanel";
 import { AppSettingsPanel } from "@/components/AppSettingsPanel";
 import { SettingsLogin } from "@/components/SettingsLogin";
+import { EngineBuilder } from "@/components/EngineBuilder";
 
 function Shell() {
   const { state, dispatch } = useStore();
   const [showLogin, setShowLogin] = useState(false);
+  const [autoEngine, setAutoEngine] = useState(false);
+  // Check URL for ?open=engine-builder
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("open") === "engine-builder") {
+      setAutoEngine(true);
+      dispatch({ type: "toggleAppSettings", open: true });
+    }
+  }, []);
   const bot = state.bots.find((b) => b.id === state.selectedId) ?? state.bots[0];
   const onLoginSuccess = () => { setShowLogin(false); dispatch({ type: "unlockSettings", on: true }); };
   return (
@@ -70,6 +80,7 @@ function Shell() {
       {showLogin && <SettingsLogin onSuccess={onLoginSuccess} onClose={() => setShowLogin(false)} />}
       {state.settingsOpen && bot && (state.settingsUnlocked || !state.config?.settingsPassword?.configured ? <SettingsPanel bot={bot} /> : <SettingsLogin onSuccess={onLoginSuccess} onClose={() => { setShowLogin(false); dispatch({ type: "toggleSettings", open: false }); }} />)}
       {state.computerOpen && bot && <ComputerPanel bot={bot} />}
+      {autoEngine && <EngineBuilder onClose={() => setAutoEngine(false)} />}
       {state.appSettingsOpen && (state.settingsUnlocked || !state.config?.settingsPassword?.configured ? <AppSettingsPanel /> : <SettingsLogin onSuccess={onLoginSuccess} onClose={() => { setShowLogin(false); dispatch({ type: "toggleAppSettings", open: false }); }} />)}
       {state.pluginsOpen && <PluginsPanel />}
     </div>

@@ -107,7 +107,7 @@ function createWindow() {
   });
 
   if (app.isPackaged) {
-    win.loadURL(serverReady ? `http://127.0.0.1:${SERVER_PORT}` : ERROR_PAGE);
+    win.loadURL(serverReady ? `http://127.0.0.1:${SERVER_PORT}${openEngineBuilder ? "?open=engine-builder" : ""}` : ERROR_PAGE);
   } else {
     win.loadURL(DEV_URL);
   }
@@ -169,6 +169,8 @@ ipcMain.handle("speech:start", (event) => {
   if (win) startSpeech(win);
 });
 ipcMain.handle("speech:stop", () => stopSpeech());
+
+const openEngineBuilder = process.argv.includes("--engine-builder");
 
 app.whenReady().then(async () => {
   if (isMac) app.dock.setIcon(APP_ICON);
