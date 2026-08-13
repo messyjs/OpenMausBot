@@ -17,6 +17,7 @@ import {
 } from "lucide-react";
 import { useStore, formatTime, type Bot } from "@/state/store";
 import { MausAvatar, InitialsAvatar } from "./Avatar";
+import { PresetPicker } from "./PresetPicker";
 import { expressionForBot } from "@/lib/mascot";
 import { cn } from "@/lib/cn";
 
@@ -197,6 +198,7 @@ function BotListItem({ bot, onMenu }: { bot: Bot; onMenu: (menu: MenuState) => v
 export function Sidebar() {
   const { state, dispatch } = useStore();
   const [menu, setMenu] = useState<MenuState | null>(null);
+  const [showPresets, setShowPresets] = useState(false);
 
   const visibleBots = state.bots
     .filter((b) => !b.hidden)
@@ -219,7 +221,7 @@ export function Sidebar() {
           </div>
         )}
         <button
-          onClick={() => { track("bot_created"); dispatch({ type: "newBot" }); }}
+          onClick={() => { track("bot_created"); setShowPresets(true); }}
           className="rounded-md p-1 text-ink-secondary hover:bg-raised hover:text-ink"
           style={{ WebkitAppRegion: "no-drag" } as React.CSSProperties}
           title="New bot"
@@ -278,6 +280,7 @@ export function Sidebar() {
       </div>
 
       {menu && <BotContextMenu menu={menu} onClose={() => setMenu(null)} />}
+      {showPresets && <PresetPicker onClose={() => setShowPresets(false)} />}
     </aside>
   );
 }

@@ -138,6 +138,7 @@ type Action =
   | { type: "answerCard"; botId: string; messageId: string; answer: string }
   | { type: "dismissCard"; botId: string; messageId: string }
   | { type: "newBot" }
+  | { type: "newPresetBot"; preset: { name: string; title: string; description: string; color: string } }
   | { type: "botAdded"; bot: Bot }
   | { type: "deleteBot"; botId: string }
   | { type: "duplicateBot"; botId: string }
@@ -491,6 +492,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             .then(({ bot }) => rawDispatch({ type: "botAdded", bot }))
             .catch(showError);
           break;
+        case "newPresetBot": {
+          api("/api/bots/preset", { method: "POST", body: JSON.stringify(action.preset) })
+            .then(({ bot }) => rawDispatch({ type: "botAdded", bot }))
+            .catch(showError);
+          break;
+        }
         case "duplicateBot": {
           const source = stateRef.current.bots.find((b) => b.id === action.botId);
           if (!source) break;

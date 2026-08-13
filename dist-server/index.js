@@ -558,6 +558,23 @@ const server = createServer(async (req, res) => {
             store.patchBot(bot.id, { modelSelection: await defaultSelection() });
             return json(res, 201, { bot: { ...store.bot(bot.id), messages: store.messagesFor(bot.threadId) } });
         }
+        // Create bot from a preset (Council OS agent template)
+        if (method === "POST" && path === "/api/bots/preset") {
+            const body = await readBody(req);
+            const bot = store.createBot();
+            store.patchBot(bot.id, { modelSelection: await defaultSelection() });
+            // Apply preset attributes if provided in the body
+            if (body.name)
+                store.patchBot(bot.id, { name: String(body.name) });
+            if (body.title)
+                store.patchBot(bot.id, { title: String(body.title) });
+            if (body.description)
+                store.patchBot(bot.id, { description: String(body.description) });
+            if (body.color)
+                store.patchBot(bot.id, { color: String(body.color) });
+            broadcast({ kind: "bot", bot: store.bot(bot.id) });
+            return json(res, 201, { bot: { ...store.bot(bot.id), messages: store.messagesFor(bot.threadId) } });
+        }
         let m = path.match(/^\/api\/bots\/([\w-]+)$/);
         if (m && method === "PATCH") {
             const body = await readBody(req);
