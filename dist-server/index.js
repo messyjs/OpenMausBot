@@ -480,6 +480,7 @@ function configStatus() {
         ollamaMjLaptop: { configured: true, url: cfg.ollamaMjLaptop?.url ?? "http://<mj-laptop-ip>:11434" },
         ollamaCloud: { configured: Boolean(cfg.ollamaCloud?.apiKey), url: cfg.ollamaCloud?.url ?? "https://api.ollama.com" },
         // not a secret — the sidebar shows it
+        settingsPassword: { configured: Boolean(cfg.settingsPassword) },
         profile: { name: cfg.profile?.name ?? "", email: cfg.profile?.email ?? "" },
     };
 }
@@ -721,7 +722,7 @@ const server = createServer(async (req, res) => {
         if ((method === "PUT" || method === "PATCH") && path === "/api/config") {
             const body = await readBody(req);
             const patch = {};
-            for (const key of ["xai", "composio", "box", "ollama", "ollamaWorkstation", "ollamaMjLaptop", "ollamaCloud", "profile"]) {
+            for (const key of ["xai", "composio", "box", "ollama", "ollamaWorkstation", "ollamaMjLaptop", "ollamaCloud", "profile", "settingsPassword"]) {
                 if (body[key] && typeof body[key] === "object")
                     patch[key] = body[key];
             }
@@ -779,6 +780,12 @@ const server = createServer(async (req, res) => {
                 case "screenshot":
                     return json(res, 200, await box.screenshotBox(cfg, botId));
             }
+        }
+        // ── settings password verification ──
+        if (method === "POST" && path === "/api/verify-settings-password") {
+            const body = await readBody(req);
+            const ok = cfg.settingsPassword && body.password === cfg.settingsPassword;
+            return json(res, 200, { ok });
         }
         // ── network devices (SSH/ADB) ──
         if (method === "GET" && path === "/api/devices") {

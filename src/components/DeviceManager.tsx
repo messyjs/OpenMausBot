@@ -8,7 +8,7 @@ import { cn } from "@/lib/cn";
 
 export function DeviceManager() {
   const { state, dispatch } = useStore();
-  const [editing, setEditing] = useState<(DeviceInfo & { password?: string; keyPath?: string }) | null>(null);
+  const [editing, setEditing] = useState<(DeviceInfo & { password?: string; keyPath?: string; tunnelUrl?: string; tailscaleIp?: string }) | null>(null);
   const [testing, setTesting] = useState<string | null>(null);
   const [testResult, setTestResult] = useState<{ ok: boolean; message: string } | null>(null);
 
@@ -116,6 +116,10 @@ export function DeviceManager() {
                 <input type="password" className={inputClass} onChange={(e) => setEditing({ ...editing, password: e.target.value })} placeholder="Leave empty for key-based auth" /></div>
               <div><div className={labelClass}>SSH Key Path (optional)</div>
                 <input className={inputClass} value={(editing as any).keyPath || ""} onChange={(e) => setEditing({ ...editing, keyPath: e.target.value } as any)} placeholder="~/.ssh/id_rsa" /></div>
+              <div><div className={labelClass}>Cloudflare Tunnel URL (optional)</div>
+                <input className={inputClass} value={(editing as any).tunnelUrl || ""} onChange={(e) => setEditing({ ...editing, tunnelUrl: e.target.value } as any)} placeholder="https://my-tunnel.example.com" /></div>
+              <div><div className={labelClass}>Tailscale IP/Hostname (optional)</div>
+                <input className={inputClass} value={(editing as any).tailscaleIp || ""} onChange={(e) => setEditing({ ...editing, tailscaleIp: e.target.value } as any)} placeholder="100.x.x.x or tailnet-name" /></div>
             </>)}
             {editing.type === "adb" && (
               <div><div className={labelClass}>ADB Device ID (optional)</div>

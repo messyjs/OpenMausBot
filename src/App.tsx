@@ -9,10 +9,13 @@ import { SettingsPanel } from "@/components/SettingsPanel";
 import { PluginsPanel } from "@/components/PluginsPanel";
 import { ComputerPanel } from "@/components/ComputerPanel";
 import { AppSettingsPanel } from "@/components/AppSettingsPanel";
+import { SettingsLogin } from "@/components/SettingsLogin";
 
 function Shell() {
-  const { state } = useStore();
+  const { state, dispatch } = useStore();
+  const [showLogin, setShowLogin] = useState(false);
   const bot = state.bots.find((b) => b.id === state.selectedId) ?? state.bots[0];
+  const onLoginSuccess = () => { setShowLogin(false); dispatch({ type: "unlockSettings", on: true }); };
   return (
     <div className="relative flex h-full">
       <Sidebar />
@@ -31,9 +34,10 @@ function Shell() {
           )}
         </main>
       )}
-      {state.settingsOpen && bot && <SettingsPanel bot={bot} />}
+      {showLogin && <SettingsLogin onSuccess={onLoginSuccess} onClose={() => setShowLogin(false)} />}
+      {state.settingsOpen && bot && (state.settingsUnlocked || !state.config?.settingsPassword?.configured ? <SettingsPanel bot={bot} /> : <SettingsLogin onSuccess={onLoginSuccess} onClose={() => { setShowLogin(false); dispatch({ type: "toggleSettings", open: false }); }} />)}
       {state.computerOpen && bot && <ComputerPanel bot={bot} />}
-      {state.appSettingsOpen && <AppSettingsPanel />}
+      {state.appSettingsOpen && (state.settingsUnlocked || !state.config?.settingsPassword?.configured ? <AppSettingsPanel /> : <SettingsLogin onSuccess={onLoginSuccess} onClose={() => { setShowLogin(false); dispatch({ type: "toggleAppSettings", open: false }); }} />)}
       {state.pluginsOpen && <PluginsPanel />}
     </div>
   );

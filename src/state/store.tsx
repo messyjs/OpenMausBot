@@ -82,6 +82,7 @@ export interface ConfigStatus {
   ollamaCloud: { configured: boolean; url?: string };
   /** who's using the app — collected in onboarding, shown in the sidebar */
   profile?: { name: string; email: string };
+  settingsPassword?: { configured: boolean };
 }
 
 /** A network device (SSH/ADB) from GET /api/devices — no credentials. */
@@ -129,6 +130,7 @@ interface AppState {
   connected: boolean;
   /** Director mode: messages route to Towelie who delegates to specialists */
   directorMode: boolean;
+  settingsUnlocked: boolean;
   error: string | null;
   mascotMotion: {
     botId: string;
@@ -169,6 +171,7 @@ type Action =
   | { type: "toggleAppSettings"; open?: boolean }
   | { type: "previewMascotMotion"; botId: string; kind: Exclude<MausMotion, "none"> }
   | { type: "toggleDirector"; on: boolean }
+  | { type: "unlockSettings"; on: boolean }
   | {
       type: "updateBot";
       botId: string;
@@ -377,6 +380,8 @@ function reducer(state: AppState, action: Action): AppState {
       return withMascotMotion(state, action.botId, action.kind);
     case "toggleDirector":
       return { ...state, directorMode: action.on };
+    case "unlockSettings":
+      return { ...state, settingsUnlocked: action.on };
     case "updateBot": {
       const mascotChanged =
         Object.prototype.hasOwnProperty.call(action.patch, "color") ||
@@ -413,6 +418,7 @@ const initialState: AppState = {
   provisioning: {},
   connected: false,
   directorMode: false,
+  settingsUnlocked: false,
   error: null,
   mascotMotion: null,
 };
@@ -659,7 +665,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
           rawDispatch({
             type: "configStatus",
             config: { xai: frame.xai, composio: frame.composio, box: frame.box, ollama: frame.ollama, ollamaWorkstation: frame.ollamaWorkstation,
-    ollamaMjLaptop: frame.ollamaMjLaptop, ollamaCloud: frame.ollamaCloud, profile: frame.profile },
+    ollamaMjLaptop: frame.ollamaMjLaptop, ollamaCloud: frame.ollamaCloud, profile: frame.profile, settingsPassword: frame.settingsPassword },
           });
           api("/api/instances")
             .then(({ instances }) => rawDispatch({ type: "instances", instances }))

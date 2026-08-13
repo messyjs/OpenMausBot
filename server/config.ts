@@ -29,6 +29,10 @@ export interface NetworkDevice {
   adbDeviceId?: string;
   // Optional: display info for screen capture
   display?: string;
+  // Cloudflare tunnel URL (alternative to LAN IP)
+  tunnelUrl?: string;
+  // Tailscale hostname/IP (alternative to LAN IP)
+  tailscaleIp?: string;
 }
 
 export interface AppConfig {
@@ -45,6 +49,8 @@ export interface AppConfig {
   ollamaCloud?: OllamaEndpoint;
   devices?: NetworkDevice[];
   profile?: { name?: string; email?: string };
+  /** Password to access settings (empty = not set, first use prompts to create) */
+  settingsPassword?: string;
   instances?: InstanceConfigMap;
 }
 
@@ -79,7 +85,7 @@ export function saveConfig(patch: Partial<AppConfig>): void {
   const p = join(DATA_DIR, "config.json");
   let disk: Record<string, unknown> = {};
   try { disk = JSON.parse(readFileSync(p, "utf8")); } catch {}
-  for (const key of ["xai", "composio", "box", "ollama", "ollamaWorkstation", "ollamaMjLaptop", "ollamaCloud", "profile", "devices"] as const) {
+  for (const key of ["xai", "composio", "box", "ollama", "ollamaWorkstation", "ollamaMjLaptop", "ollamaCloud", "profile", "devices", "settingsPassword"] as const) {
     if (patch[key] !== undefined) {
       if (Array.isArray(patch[key])) {
         disk[key] = patch[key];
