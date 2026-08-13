@@ -84,7 +84,7 @@ export function AppSettingsPanel() {
             Remote Ollama on your LAN. Larger models run here.
           </div>
           <div className="mt-4">
-            <ApiKeyRow section="ollamaWorkstationUrl" label="Workstation URL" placeholder="http://192.168.68.70:11434" />
+            <ApiKeyRow section="ollamaWorkstationUrl" label="Workstation URL" placeholder="http://<workstation-ip>:11434" />
           </div>
         </div>
 

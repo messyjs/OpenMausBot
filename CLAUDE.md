@@ -31,7 +31,7 @@ The harness server runs on port 8799.
 ## Multi-Ollama Setup
 Three Ollama instances:
 1. ollamaLocal - http://127.0.0.1:11434 (no API key)
-2. ollamaWorkstation - http://192.168.68.70:11434 (no API key)
+2. ollamaWorkstation - http://<workstation-ip>:11434 (no API key)
 3. ollamaCloud - https://api.ollama.com (requires API key)
 
 Config: ~/.openmausbot/config.json

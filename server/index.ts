@@ -424,7 +424,7 @@ function configStatus() {
     composio: { configured: Boolean(cfg.composio?.key), apiKeyConfigured: Boolean(cfg.composio?.apiKey) },
     box: { configured: Boolean(cfg.box?.token) },
     ollama: { configured: true, url: cfg.ollama?.url ?? "http://127.0.0.1:11434" },
-    ollamaWorkstation: { configured: true, url: cfg.ollamaWorkstation?.url ?? "http://192.168.68.70:11434" },
+    ollamaWorkstation: { configured: true, url: cfg.ollamaWorkstation?.url ?? "http://<workstation-ip>:11434" },
     ollamaCloud: { configured: Boolean(cfg.ollamaCloud?.apiKey), url: cfg.ollamaCloud?.url ?? "https://api.ollama.com" },
     // not a secret — the sidebar shows it
     profile: { name: cfg.profile?.name ?? "", email: cfg.profile?.email ?? "" },

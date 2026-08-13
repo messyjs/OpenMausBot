@@ -1,7 +1,7 @@
 // Config + data dirs. One file, ~/.openmausbot/config.json, env fallbacks:
 //   { "xai": {"key":"xai-…"}, "composio": {"key":"ck_…"}, "box": {"token":"…"},
 //     "ollama": {"url":"http://127.0.0.1:11434"},
-//     "ollamaWorkstation": {"url":"http://192.168.68.70:11434"},
+//     "ollamaWorkstation": {"url":"http://<workstation-ip>:11434"},
 //     "ollamaCloud": {"url":"https://api.ollama.com", "apiKey":"…"},
 //     "instances": { "<instanceId>": {"driver":"ollama", …} } }
 import { readFileSync, writeFileSync, mkdirSync, existsSync, renameSync } from "node:fs";
@@ -85,7 +85,7 @@ export function instanceConfigs(cfg: AppConfig): InstanceConfigMap {
           ollamaWorkstation: {
             driver: "ollama",
             displayName: "Ollama (Workstation)",
-            config: { url: cfg.ollamaWorkstation?.url ?? "http://192.168.68.70:11434" },
+            config: { url: cfg.ollamaWorkstation?.url ?? "http://<workstation-ip>:11434" },
           },
           ollamaCloud: {
             driver: "ollama",
