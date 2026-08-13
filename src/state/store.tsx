@@ -175,7 +175,7 @@ type Action =
   | { type: "answerCard"; botId: string; messageId: string; answer: string }
   | { type: "dismissCard"; botId: string; messageId: string }
   | { type: "newBot" }
-  | { type: "newPresetBot"; preset: { name: string; title: string; description: string; color: string; towelieBehavior?: boolean } }
+  | { type: "newPresetBot"; preset: { presetId?: string; name: string; title: string; description: string; color: string; towelieBehavior?: boolean } }
   | { type: "botAdded"; bot: Bot }
   | { type: "deleteBot"; botId: string }
   | { type: "duplicateBot"; botId: string }

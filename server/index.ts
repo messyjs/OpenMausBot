@@ -2,7 +2,7 @@
 // (upstream rule): the React app dispatches typed commands over HTTP and
 // folds one SSE event stream; every provider process runs here.
 import { randomBytes } from "node:crypto";
-import { existsSync, readFileSync, unlinkSync } from "node:fs";
+import { existsSync, readFileSync, unlinkSync, readdirSync, writeFileSync, mkdirSync } from "node:fs";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { homedir } from "node:os";
 import { dirname, extname, join } from "node:path";
@@ -11,6 +11,7 @@ import { fileURLToPath } from "node:url";
 import * as box from "./box.ts";
 import * as devices from "./devices.ts";
 import { getToolsForBot, createToolExecutor } from "./bot-tools.ts";
+const ENGINES_DIR = join(homedir(), ".openmausbot", "engines");
 import * as composio from "./composio.ts";
 import { ensureDirs, instanceConfigs, loadConfig, saveConfig, EVENTS_DIR, NATIVE_DIR } from "./config.ts";
 import type { RuntimeEvent } from "./contracts.ts";
@@ -610,6 +611,12 @@ const server = createServer(async (req, res) => {
       if (body.name) store.patchBot(bot.id, { name: String(body.name) });
       if (body.title) store.patchBot(bot.id, { title: String(body.title) });
       if (body.description) store.patchBot(bot.id, { description: String(body.description) });
+      // Auto-load engine file if it exists for this preset
+      const enginePath = join(ENGINES_DIR, String(body.presetId ?? body.name ?? "").toLowerCase().replace(/s/g, "_") + ".txt");
+      if (existsSync(enginePath) && !body.description) {
+        const engineContent = readFileSync(enginePath, "utf8");
+        store.patchBot(bot.id, { description: engineContent });
+      }
       if (body.color) store.patchBot(bot.id, { color: String(body.color) as any });
       if (body.towelieBehavior !== undefined) store.patchBot(bot.id, { towelieBehavior: Boolean(body.towelieBehavior) });
       broadcast({ kind: "bot", bot: store.bot(bot.id) });
@@ -807,6 +814,31 @@ const server = createServer(async (req, res) => {
       }
     }
 
+
+    // ── engines ──
+    if (method === "GET" && path === "/api/engines") {
+      try {
+        const engines = existsSync(ENGINES_DIR) ? readdirSync(ENGINES_DIR).filter(f => f.endsWith(".txt")).map(f => f.replace(".txt", "")) : [];
+        return json(res, 200, { engines });
+      } catch { return json(res, 200, { engines: [] }); }
+    }
+    m = path.match(/^\/api\/engines\/(.+)$/);
+    if (m && method === "GET") {
+      const enginePath = join(ENGINES_DIR, m[1] + ".txt");
+      if (!existsSync(enginePath)) return json(res, 404, { error: "engine not found" });
+      const content = readFileSync(enginePath, "utf8");
+      return json(res, 200, { id: m[1], content });
+    }
+    if (method === "POST" && path === "/api/engines") {
+      const body = await readBody(req);
+      const engineId = String(body.id ?? "").replace(/[^a-z0-9_-]/gi, "_");
+      const content = String(body.content ?? "");
+      if (!engineId || !content) return json(res, 400, { error: "id and content required" });
+      mkdirSync(ENGINES_DIR, { recursive: true });
+      const enginePath = join(ENGINES_DIR, engineId + ".txt");
+      writeFileSync(enginePath, content);
+      return json(res, 200, { ok: true, id: engineId });
+    }
 
     // ── settings password verification ──
     if (method === "POST" && path === "/api/verify-settings-password") {

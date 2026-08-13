@@ -20,7 +20,7 @@ export function PresetPicker({ onClose }: { onClose: () => void }) {
   });
 
   const create = (preset: BotPreset) => {
-    dispatch({ type: "newPresetBot", preset: { name: preset.name, title: preset.title, description: preset.description, color: preset.color, towelieBehavior: false } as any });
+    dispatch({ type: "newPresetBot", preset: { presetId: preset.id, name: preset.name, title: preset.title, description: preset.description, color: preset.color, towelieBehavior: false } as any });
     onClose();
   };
 
