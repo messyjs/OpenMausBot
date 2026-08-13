@@ -66,7 +66,7 @@ function OllamaAccountPicker({ bot, instances, onPick }: { bot: Bot; instances: 
 }
 export function SettingsPanel({ bot }: { bot: Bot }) {
   const { state, dispatch } = useStore();
-  const patch = (p: Partial<Pick<Bot, "name"|"title"|"description"|"notifications"|"computer"|"color"|"mascotExpression"|"pythonEnabled"|"compressedComms"|"towelieBehavior">>) => dispatch({ type: "updateBot", botId: bot.id, patch: p });
+  const patch = (p: Partial<Pick<Bot, "name"|"title"|"description"|"notifications"|"computer"|"color"|"mascotExpression"|"pythonEnabled"|"compressedComms"|"towelieBehavior"|"engineEnabled">>) => dispatch({ type: "updateBot", botId: bot.id, patch: p });
   const activeExpression = expressionForBot(bot);
   const mascotMotion = state.mascotMotion?.botId === bot.id ? state.mascotMotion : null;
   return (
@@ -146,6 +146,7 @@ export function SettingsPanel({ bot }: { bot: Bot }) {
             </div>
           </div>
           <Toggle on={bot.towelieBehavior === true} onClick={() => patch({ towelieBehavior: !bot.towelieBehavior })} label="Towelie Behavior" desc="Dopey stoner personality, random towel reminders, wanna get high, forgets jokes mid-telling. OFF by default — enable to activate the South Park act." />
+          <Toggle on={bot.engineEnabled !== false} onClick={() => patch({ engineEnabled: bot.engineEnabled === false ? true : false })} label="Engine Active" desc="Enable/disable the loaded engine. When OFF, the bot uses only its basic description (saves tokens)." />
           <Toggle on={!!bot.pythonEnabled} onClick={() => patch({ pythonEnabled: !bot.pythonEnabled })} label="Python Runtime" desc="Bot can execute Python code in a sandbox" />
           <Toggle on={!!bot.compressedComms} onClick={() => patch({ compressedComms: !bot.compressedComms })} label="Secret Language" desc="Compressed inter-bot communication to save tokens" />
           <Toggle on={!!bot.notifications} onClick={() => patch({ notifications: !bot.notifications })} label="Notifications" desc="Get notified when this agent finishes or needs input" />

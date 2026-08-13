@@ -333,13 +333,16 @@ async function startTurn(botId, text, opts) {
         .map((m) => ({ role: m.role === "user" ? "user" : "assistant", text: m.text }));
     // Towelie gets a special dual personality; other bots use standard persona
     const isTow = isTowelieBot(bot) && bot.towelieBehavior !== false;
+    const engineOff = bot.engineEnabled === false;
     const persona = isTow
-        ? TOWELIE_PERSONALITY + (bot.description ? " Additional context: " + bot.description : "")
-        : [
-            `You are ${bot.name}, a personal bot in Towelie Bot.`,
-            bot.title && `Role: ${bot.title}.`,
-            bot.description && `About: ${bot.description}`,
-        ].filter(Boolean).join(" ");
+        ? TOWELIE_PERSONALITY + (bot.description && !engineOff ? " Additional context: " + bot.description : "")
+        : engineOff
+            ? `You are ${bot.name}, a personal bot in Towelie Bot.` + (bot.title ? ` Role: ${bot.title}.` : "")
+            : [
+                `You are ${bot.name}, a personal bot in Towelie Bot.`,
+                bot.title && `Role: ${bot.title}.`,
+                bot.description && `About: ${bot.description}`,
+            ].filter(Boolean).join(" ");
     // busy flips immediately so the composer locks; the dispatch itself runs
     // in the background — box provisioning can take ~90s and must never
     // hang the HTTP request
@@ -627,7 +630,7 @@ const server = createServer(async (req, res) => {
         if (m && method === "PATCH") {
             const body = await readBody(req);
             const patch = {};
-            for (const key of ["name", "title", "description", "notifications", "modelSelection", "unread", "computer", "deviceId", "color", "mascotExpression", "pinned", "hidden", "pythonEnabled", "compressedComms", "towelieBehavior"]) {
+            for (const key of ["name", "title", "description", "notifications", "modelSelection", "unread", "computer", "deviceId", "color", "mascotExpression", "pinned", "hidden", "pythonEnabled", "compressedComms", "towelieBehavior", "engineEnabled"]) {
                 if (body[key] !== undefined)
                     patch[key] = body[key];
             }

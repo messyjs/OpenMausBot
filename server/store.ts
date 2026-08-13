@@ -80,6 +80,8 @@ export interface BotRecord {
   compressedComms?: boolean;
   /** Enable Towelie personality (dopey towel, random towel reminders, wanna get high). */
   towelieBehavior?: boolean;
+  /** Whether the bot engine (loaded from ~/.openmausbot/engines/) is active */
+  engineEnabled?: boolean;
   pinned?: boolean;
   hidden?: boolean;
   busy?: boolean;

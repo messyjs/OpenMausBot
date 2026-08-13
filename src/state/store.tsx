@@ -79,6 +79,8 @@ export interface Bot {
   compressedComms?: boolean;
   /** Enable Towelie personality (dopey, towel reminders, wanna get high). */
   towelieBehavior?: boolean;
+  /** Whether the bot engine is active */
+  engineEnabled?: boolean;
   pinned?: boolean;
   hidden?: boolean;
   messages: Message[];
