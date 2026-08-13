@@ -66,7 +66,7 @@ async function cmdKillOmb() {
         const res = await fetch("http://127.0.0.1:" + port + "/api/health", { signal: AbortSignal.timeout(2000) });
         if (res.ok) {
           const body = await res.json();
-          if (body && body.app === "openmausbot") {
+          if (body && (body.app === "openmausbot" || body.app === "towelie-ai")) {
             console.log(" Killing OpenMausBot server (PID " + pid + ") on port " + port);
             killPid(pid);
             return;

@@ -1,6 +1,6 @@
-appId: com.openmausbot.app
-productName: OpenMausBot
-artifactName: OpenMausBot-${version}-${arch}.${ext}
+appId: com.towelie-ai.app
+productName: TowelieAI
+artifactName: TowelieAI-${version}-${arch}.${ext}
 
 directories:
   buildResources: build
@@ -41,15 +41,15 @@ mac:
   entitlements: build/entitlements.mac.plist
   entitlementsInherit: build/entitlements.mac.plist
   extendInfo:
-    NSMicrophoneUsageDescription: OpenMausBot uses the microphone for voice dictation into the composer.
-    NSSpeechRecognitionUsageDescription: OpenMausBot transcribes your voice on-device to type messages for you.
+    NSMicrophoneUsageDescription: TowelieAI uses the microphone for voice dictation into the composer.
+    NSSpeechRecognitionUsageDescription: TowelieAI transcribes your voice on-device to type messages for you.
   # Notarization runs manually after the build (notarytool + staple),
   # mirroring the BlueyLite ship_release.sh flow.
   notarize: false
 
 dmg:
   sign: true
-  artifactName: OpenMausBot-${version}.dmg
+  artifactName: TowelieAI-${version}.dmg
 
 win:
   target:
@@ -63,6 +63,6 @@ nsis:
   oneClick: false
   perMachine: false
   allowToChangeInstallationDirectory: true
-  artifactName: OpenMausBot-Setup-${version}-${arch}.${ext}
-  shortcutName: OpenMausBot
-  uninstallDisplayName: OpenMausBot
+  artifactName: TowelieAI-Setup-${version}-${arch}.${ext}
+  shortcutName: TowelieAI
+  uninstallDisplayName: TowelieAI
