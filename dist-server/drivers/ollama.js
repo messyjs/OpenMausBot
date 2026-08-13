@@ -191,14 +191,21 @@ export const OllamaDriver = {
                             roundMsgs = [{ role: "system", content: (turn.system || "") + ti }, ...convMsgs.slice(1)];
                         }
                         const result = await complete(roundMsgs, model, {
-                            stream: true, signal: abort.signal,
+                            stream: true, signal: abort.signal, tools: toolDefs,
                             onDelta: (delta) => emit({ ...base(threadId, turnId), type: "content.delta", streamKind: "assistant_text", delta }),
                         });
                         finalText = result.text;
                         finalUsage = result.usage;
                         const matches = finalText.match(tcR);
                         const nativeCalls = result.toolCalls || [];
-                        if ((!matches || matches.length === 0) && nativeCalls.length === 0)
+                        const bareJson = finalText.trim().startsWith("{") && finalText.includes("name") && finalText.includes("arguments") ? (() => { try {
+                            const j = JSON.parse(finalText.trim());
+                            return [{ name: j.name || "", args: j.arguments || {} }];
+                        }
+                        catch {
+                            return [];
+                        } })() : [];
+                        if ((!matches || matches.length === 0) && nativeCalls.length === 0 && bareJson.length === 0)
                             break;
                         if (!executors)
                             break;
@@ -217,6 +224,9 @@ export const OllamaDriver = {
                             catch {
                                 calls.push({ name: tc.name, args: {} });
                             }
+                        }
+                        for (const bc of bareJson) {
+                            calls.push(bc);
                         }
                         if (calls.length === 0)
                             break;

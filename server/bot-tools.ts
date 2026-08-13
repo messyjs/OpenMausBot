@@ -2,6 +2,7 @@
 import { readFileSync, writeFileSync, readdirSync, mkdirSync, existsSync } from "node:fs";
 import { join } from "node:path";
 import { homedir } from "node:os";
+import { spawn } from "node:child_process";
 import type { AppConfig } from "./config.ts";
 import { getDevice, runDeviceCommand, deviceScreenshot } from "./devices.ts";
 
@@ -53,16 +54,24 @@ export function createToolExecutor(cfg: AppConfig, botDeviceId?: string): Record
       return r.stdout + (r.stderr ? nl + "[stderr] " + r.stderr : "") + nl + "[exit: " + r.exitCode + "]";
     }
     try {
-      // Use spawn for non-blocking execution (GUI apps like notepad won't block)
-      const { spawn } = require("node:child_process");
       const isWindows = process.platform === "win32";
-      const child = spawn(isWindows ? "cmd" : "/bin/sh", isWindows ? ["/c", cmd] : ["-c", cmd], { detached: !isWindows, stdio: ["pipe", "pipe", "pipe"] });
-      let stdout = "", stderr = "";
-      child.stdout?.on("data", (d: Buffer) => stdout += d.toString());
-      child.stderr?.on("data", (d: Buffer) => stderr += d.toString());
       return new Promise((resolve) => {
-        const timer = setTimeout(() => { try { child.kill(); } catch {} resolve(stdout + (stderr ? nl + "[stderr] " + stderr : "") + nl + "[timed out after " + timeout + "ms]"); }, timeout);
-        child.on("close", (code: number | null) => { clearTimeout(timer); resolve(stdout + (stderr ? nl + "[stderr] " + stderr : "") + nl + "[exit: " + code + "]"); });
+        const child = spawn(isWindows ? "cmd" : "/bin/sh", isWindows ? ["/c", cmd] : ["-c", cmd], { detached: true, stdio: ["pipe", "pipe", "pipe"] });
+        let stdout = "", stderr = "";
+        child.stdout?.on("data", (d: Buffer) => stdout += d.toString());
+        child.stderr?.on("data", (d: Buffer) => stderr += d.toString());
+        // If process produces output quickly, return it. If not, return after 3s.
+        const timer = setTimeout(() => {
+          try { child.unref(); } catch {}
+          if (stdout) resolve(stdout + (stderr ? nl + "[stderr] " + stderr : ""));
+          else resolve("Command started successfully (running in background, PID: " + child.pid + ").");
+        }, 3000);
+        child.on("close", (code: number | null) => {
+          clearTimeout(timer);
+          const result = stdout + (stderr ? nl + "[stderr] " + stderr : "");
+          if (!result.trim()) resolve("Command completed (exit: " + code + ").");
+          else resolve(result + nl + "[exit: " + code + "]");
+        });
         child.on("error", (e: Error) => { clearTimeout(timer); resolve("Error: " + e.message); });
       });
     } catch (e) {

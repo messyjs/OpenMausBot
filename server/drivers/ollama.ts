@@ -223,14 +223,15 @@ export const OllamaDriver: ProviderDriver<OllamaConfig> = {
         roundMsgs = [{ role: "system", content: (turn.system||"")+ti }, ...convMsgs.slice(1)];
       }
       const result = await complete(roundMsgs, model, {
-        stream: true, signal: abort.signal,
+        stream: true, signal: abort.signal, tools: toolDefs,
         onDelta: (delta: string) => emit({ ...base(threadId, turnId), type: "content.delta", streamKind: "assistant_text", delta }),
       });
       finalText = result.text;
       finalUsage = result.usage;
       const matches = finalText.match(tcR);
       const nativeCalls = result.toolCalls || [];
-      if ((!matches||matches.length===0) && nativeCalls.length===0) break;
+      const bareJson = finalText.trim().startsWith("{") && finalText.includes("name") && finalText.includes("arguments") ? (()=>{try{const j=JSON.parse(finalText.trim());return [{name:j.name||"",args:j.arguments||{}}];}catch{return [];}})() : [];
+      if ((!matches||matches.length===0) && nativeCalls.length===0 && bareJson.length===0) break;
       if (!executors) break;
       const calls: Array<{name:string;args:Record<string,unknown>}> = [];
       for (const m of (matches||[])) {
@@ -239,6 +240,7 @@ export const OllamaDriver: ProviderDriver<OllamaConfig> = {
       for (const tc of nativeCalls) {
         try { calls.push({name:tc.name,args:JSON.parse(tc.arguments)}); } catch { calls.push({name:tc.name,args:{}}); }
       }
+      for (const bc of bareJson) { calls.push(bc); }
       if (calls.length===0) break;
       finalText = finalText.replace(tcR,"").trim();
       for (const call of calls) {
