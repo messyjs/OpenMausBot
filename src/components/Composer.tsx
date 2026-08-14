@@ -177,9 +177,21 @@ export function Composer({ bot }: { bot: Bot }) {
           }
           className="w-full bg-transparent text-[15px] text-ink placeholder:text-ink-secondary resize-none focus:outline-none"
         ></textarea>
-        {text.trim() && !bot.busy ? (
-          <button onClick={send} className="flex size-8 shrink-0 items-center justify-center rounded-full bg-accent text-white hover:bg-accent/90" title="Send (Shift+Enter)"><Send size={16} /></button>
-        ) : bot.busy ? (
+        {/* Mic button */}
+        <button
+          onClick={toggleMic}
+          className={cn(
+            "flex size-8 shrink-0 items-center justify-center rounded-full",
+            recording
+              ? "animate-pulse bg-danger/20 text-danger"
+              : "text-ink-secondary hover:bg-raised hover:text-ink",
+          )}
+          title={recording ? "Stop dictation (Esc)" : "Dictate"}
+        >
+          <Mic size={18} />
+        </button>
+        {/* Stop button when bot is working */}
+        {bot.busy && (
           <button
             onClick={() => dispatch({ type: "interrupt", botId: bot.id })}
             className="flex size-8 shrink-0 items-center justify-center rounded-full text-ink-secondary hover:bg-raised hover:text-ink"
@@ -187,20 +199,21 @@ export function Composer({ bot }: { bot: Bot }) {
           >
             <Square size={14} className="fill-current" />
           </button>
-        ) : (
-          <button
-            onClick={toggleMic}
-            className={cn(
-              "flex size-8 shrink-0 items-center justify-center rounded-full",
-              recording
-                ? "animate-pulse bg-danger/20 text-danger"
-                : "text-ink-secondary hover:bg-raised hover:text-ink",
-            )}
-            title={recording ? "Stop dictation (Esc)" : "Dictate"}
-          >
-            <Mic size={18} />
-          </button>
         )}
+        {/* Send button — ALWAYS visible */}
+        <button
+          onClick={send}
+          disabled={!text.trim() || bot.busy}
+          className={cn(
+            "flex size-8 shrink-0 items-center justify-center rounded-full",
+            text.trim() && !bot.busy
+              ? "bg-accent text-white hover:bg-accent/90"
+              : "bg-raised text-ink-secondary/40 cursor-not-allowed",
+          )}
+          title="Send (Shift+Enter)"
+        >
+          <Send size={16} />
+        </button>
         </div>
       </div>
     </div>
