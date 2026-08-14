@@ -630,7 +630,7 @@ const server = createServer(async (req, res) => {
         if (m && method === "PATCH") {
             const body = await readBody(req);
             const patch = {};
-            for (const key of ["name", "title", "description", "notifications", "modelSelection", "unread", "computer", "deviceId", "color", "mascotExpression", "pinned", "hidden", "pythonEnabled", "compressedComms", "towelieBehavior", "engineEnabled"]) {
+            for (const key of ["name", "title", "description", "notifications", "modelSelection", "unread", "computer", "deviceId", "color", "mascotExpression", "pinned", "hidden", "pythonEnabled", "compressedComms", "towelieBehavior", "engineEnabled", "startOptions"]) {
                 if (body[key] !== undefined)
                     patch[key] = body[key];
             }
@@ -718,6 +718,18 @@ const server = createServer(async (req, res) => {
                 return json(res, 404, { error: "no such bot" });
             // Clear messages and create a fresh welcome
             store.createSession(bot.id);
+            // Run start options if configured
+            if (bot.startOptions?.autoRecall) {
+                const memDir = join(homedir(), ".openmausbot", "memory");
+                if (existsSync(memDir)) {
+                    const keys = readdirSync(memDir).map(f => f.replace(".json", ""));
+                    if (keys.length > 0)
+                        store.appendMessage(bot.threadId, { role: "bot", kind: "text", text: "Memory recalled: " + keys.join(", ") });
+                }
+            }
+            if (bot.startOptions?.systemMessage) {
+                store.appendMessage(bot.threadId, { role: "bot", kind: "text", text: bot.startOptions.systemMessage });
+            }
             broadcast({ kind: "bot", bot: store.bot(bot.id) });
             return json(res, 200, { bot: { ...store.bot(bot.id), messages: store.messagesFor(bot.threadId) } });
         }
@@ -939,6 +951,40 @@ const server = createServer(async (req, res) => {
             const enginePath = join(ENGINES_DIR, engineId + ".txt");
             writeFileSync(enginePath, content);
             return json(res, 200, { ok: true, id: engineId });
+        }
+        // ── device pairing / auto-discovery ──
+        if (method === "POST" && path === "/api/devices/scan") {
+            const results = [];
+            // 1. Scan ADB devices
+            try {
+                const { execSync } = await import("node:child_process");
+                const adbOut = execSync("adb devices -l", { timeout: 5000, encoding: "utf8" });
+                for (const line of adbOut.split(String.fromCharCode(10))) {
+                    const m = line.match(/^(S+)s+devices/);
+                    if (m) {
+                        const id = m[1];
+                        const nameMatch = line.match(/model:(S+)/);
+                        results.push({ name: nameMatch ? nameMatch[1].replace(/_/g, " ") : "Android Device", type: "adb", host: "", adbDeviceId: id });
+                    }
+                }
+            }
+            catch { }
+            // 2. Scan ARP table for network devices
+            try {
+                const { execSync } = await import("node:child_process");
+                const arpOut = execSync("arp -a", { timeout: 5000, encoding: "utf8" });
+                for (const line of arpOut.split(String.fromCharCode(10))) {
+                    const m = line.match(/([d.]+)s+([a-f0-9-]+)s+(w+)/);
+                    if (m && m[1] !== "224.0.0.22" && !m[1].startsWith("239.")) {
+                        // Skip already configured devices
+                        const existing = (cfg.devices || []).some(d => d.host === m[1]);
+                        if (!existing)
+                            results.push({ name: "Network Device (" + m[1] + ")", type: "ssh", host: m[1], port: 22 });
+                    }
+                }
+            }
+            catch { }
+            return json(res, 200, { devices: results });
         }
         // ── settings password verification ──
         if (method === "POST" && path === "/api/verify-settings-password") {

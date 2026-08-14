@@ -81,6 +81,7 @@ export interface Bot {
   towelieBehavior?: boolean;
   /** Whether the bot engine is active */
   engineEnabled?: boolean;
+  startOptions?: { autoRecall?: boolean; initCommand?: string; systemMessage?: string };
   pinned?: boolean;
   hidden?: boolean;
   messages: Message[];

@@ -82,6 +82,8 @@ export interface BotRecord {
   towelieBehavior?: boolean;
   /** Whether the bot engine (loaded from ~/.openmausbot/engines/) is active */
   engineEnabled?: boolean;
+  /** Commands to run when starting a new session */
+  startOptions?: { autoRecall?: boolean; initCommand?: string; systemMessage?: string };
   pinned?: boolean;
   hidden?: boolean;
   busy?: boolean;

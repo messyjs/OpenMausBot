@@ -2,7 +2,7 @@
 import { useState } from "react";
 import { Plus, Search, X } from "lucide-react";
 import { BOT_PRESETS, PRESET_CATEGORIES, type BotPreset } from "@/lib/presets";
-import { useStore } from "@/state/store";
+import { api, useStore } from "@/state/store";
 import { cn } from "@/lib/cn";
 
 export function PresetPicker({ onClose }: { onClose: () => void }) {
@@ -19,16 +19,33 @@ export function PresetPicker({ onClose }: { onClose: () => void }) {
     return true;
   });
 
+  const [crafting, setCrafting] = useState(false);
   const create = (preset: BotPreset) => {
     dispatch({ type: "newPresetBot", preset: { presetId: preset.id, name: preset.name, title: preset.title, description: preset.description, color: preset.color, towelieBehavior: false } as any });
     onClose();
   };
 
-  const createBlank = () => {
-    dispatch({ type: "newBot" });
-    onClose();
+  const craftWithAI = (preset: BotPreset) => {
+    setCrafting(true);
+    // Use the server to enhance the description with an LLM
+    api("/api/engines/build", {
+      method: "POST",
+      body: JSON.stringify({ subject: preset.name + " " + preset.title, enhance: true, instanceId: "ollamaMjLaptop", model: "glm-5.1:cloud", extraContext: preset.description }),
+    })
+      .then((data: any) => {
+        dispatch({ type: "newPresetBot", preset: { presetId: preset.id, name: preset.name, title: preset.title, description: data.engine || preset.description, color: preset.color, towelieBehavior: false } as any });
+        setCrafting(false);
+        onClose();
+      })
+      .catch(() => {
+        // Fall back to normal creation
+        create(preset);
+        setCrafting(false);
+      });
   };
 
+
+  const createBlank = () => { dispatch({ type: "newBot" }); onClose(); };
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
       <div className="w-[600px] max-h-[80vh] overflow-hidden rounded-2xl border border-hairline/50 bg-panel" onClick={(e) => e.stopPropagation()}>
@@ -52,7 +69,8 @@ export function PresetPicker({ onClose }: { onClose: () => void }) {
         <div className="max-h-[400px] overflow-y-auto p-3">
           <div className="grid grid-cols-2 gap-2">
             {filtered.map((preset) => (
-              <button key={preset.id} onClick={() => create(preset)} className="flex flex-col gap-1 rounded-xl border border-hairline/40 bg-card p-3 text-left hover:border-hairline hover:bg-raised/40">
+              <div key={preset.id} className="flex flex-col gap-1 rounded-xl border border-hairline/40 bg-card p-3 hover:border-hairline hover:bg-raised/40">
+              <button onClick={() => create(preset)} className="flex flex-col gap-1 text-left">
                 <div className="flex items-center gap-2">
                   <span className="size-2.5 rounded-full" style={{ background: `var(--color-${preset.color}, #377FE6)` }} />
                   <span className="text-[14px] font-medium text-ink">{preset.name}</span>
@@ -60,6 +78,8 @@ export function PresetPicker({ onClose }: { onClose: () => void }) {
                 <span className="text-[12px] text-ink-secondary">{preset.title}</span>
                 <span className="text-[11px] text-ink-secondary/70 line-clamp-2">{preset.description}</span>
               </button>
+              <button onClick={() => craftWithAI(preset)} disabled={crafting} className="flex items-center gap-1 rounded-md bg-accent/10 px-2 py-1 text-[11px] text-accent hover:bg-accent/20 disabled:opacity-50">Craft with AI</button>
+              </div>
             ))}
           </div>
           {filtered.length === 0 && <div className="py-8 text-center text-[13px] text-ink-secondary">No agents match your search.</div>}

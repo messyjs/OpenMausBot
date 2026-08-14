@@ -66,7 +66,7 @@ function OllamaAccountPicker({ bot, instances, onPick }: { bot: Bot; instances: 
 }
 export function SettingsPanel({ bot }: { bot: Bot }) {
   const { state, dispatch } = useStore();
-  const patch = (p: Partial<Pick<Bot, "name"|"title"|"description"|"notifications"|"computer"|"color"|"mascotExpression"|"pythonEnabled"|"compressedComms"|"towelieBehavior"|"engineEnabled">>) => dispatch({ type: "updateBot", botId: bot.id, patch: p });
+  const patch = (p: Partial<Pick<Bot, "name"|"title"|"description"|"notifications"|"computer"|"color"|"mascotExpression"|"pythonEnabled"|"compressedComms"|"towelieBehavior"|"engineEnabled"|"startOptions">>) => dispatch({ type: "updateBot", botId: bot.id, patch: p });
   const activeExpression = expressionForBot(bot);
   const mascotMotion = state.mascotMotion?.botId === bot.id ? state.mascotMotion : null;
   return (
@@ -149,6 +149,21 @@ export function SettingsPanel({ bot }: { bot: Bot }) {
           <Toggle on={bot.engineEnabled !== false} onClick={() => patch({ engineEnabled: bot.engineEnabled === false ? true : false })} label="Engine Active" desc="Enable/disable the loaded engine. When OFF, the bot uses only its basic description (saves tokens)." />
           <Toggle on={!!bot.pythonEnabled} onClick={() => patch({ pythonEnabled: !bot.pythonEnabled })} label="Python Runtime" desc="Bot can execute Python code in a sandbox" />
           <Toggle on={!!bot.compressedComms} onClick={() => patch({ compressedComms: !bot.compressedComms })} label="Secret Language" desc="Compressed inter-bot communication to save tokens" />
+          <div className="rounded-xl bg-card p-4">
+            <div className="text-[15px] font-medium text-ink">Start Options</div>
+            <div className="mt-0.5 text-[13px] text-ink-secondary">Run when starting a new session</div>
+            <div className="mt-3 flex flex-col gap-3">
+              <label className="flex items-center gap-2 text-[13px] text-ink">
+                <input type="checkbox" checked={!!bot.startOptions?.autoRecall} onChange={(e) => patch({ startOptions: { ...bot.startOptions, autoRecall: e.target.checked } })} className="accent-accent" />
+                <span>Auto-recall memory on new session</span>
+              </label>
+              <div>
+                <div className="mb-1 text-[12px] text-ink-secondary">Custom welcome message (optional)</div>
+                <input className={inputCls} value={bot.startOptions?.systemMessage ?? ""} onChange={(e) => patch({ startOptions: { ...bot.startOptions, systemMessage: e.target.value } })} placeholder="e.g. Ready to analyze the markets..." />
+              </div>
+            </div>
+          </div>
+
           <Toggle on={!!bot.notifications} onClick={() => patch({ notifications: !bot.notifications })} label="Notifications" desc="Get notified when this agent finishes or needs input" />
         </div>
       </div>

@@ -591,6 +591,39 @@ body {
   100% { transform: rotate(-45deg); }
 }
 
+
+/* ── Towelie South Park style animations ── */
+@keyframes towel-stoned-sway {
+  0%, 100% { transform: rotate(-1deg) translateY(0); }
+  25% { transform: rotate(1deg) translateY(-2px); }
+  50% { transform: rotate(-1deg) translateY(0); }
+  75% { transform: rotate(0.5deg) translateY(-1px); }
+}
+@keyframes towel-droop {
+  0% { transform: translateY(0) rotate(0); }
+  100% { transform: translateY(8px) rotate(3deg) scaleY(0.95); }
+}
+@keyframes towel-giggle {
+  0%, 100% { transform: translateY(0) rotate(0); }
+  20% { transform: translateY(-3px) rotate(-2deg); }
+  40% { transform: translateY(0) rotate(2deg); }
+  60% { transform: translateY(-2px) rotate(-1deg); }
+  80% { transform: translateY(0) rotate(1deg); }
+}
+@keyframes towel-nod {
+  0%, 100% { transform: rotate(0); }
+  30% { transform: rotate(-3deg); }
+  60% { transform: rotate(2deg); }
+}
+@keyframes towel-shrug {
+  0%, 100% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-4px) scaleX(1.05) scaleY(0.95); }
+}
+@keyframes towel-wave-lazy {
+  0%, 100% { transform: rotate(0); }
+  50% { transform: rotate(5deg); }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .maus-motion *,
   .maus-motion {
