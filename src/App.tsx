@@ -11,6 +11,7 @@ import { ComputerPanel } from "@/components/ComputerPanel";
 import { AppSettingsPanel } from "@/components/AppSettingsPanel";
 import { SettingsLogin } from "@/components/SettingsLogin";
 import { EngineBuilder } from "@/components/EngineBuilder";
+import { CodeEditorPanel } from "@/components/CodeEditorPanel";
 
 function Shell() {
   const { state, dispatch } = useStore();
@@ -83,6 +84,7 @@ function Shell() {
       {autoEngine && <EngineBuilder onClose={() => setAutoEngine(false)} />}
       {state.appSettingsOpen && (state.settingsUnlocked || !state.config?.settingsPassword?.configured ? <AppSettingsPanel /> : <SettingsLogin onSuccess={onLoginSuccess} onClose={() => { setShowLogin(false); dispatch({ type: "toggleAppSettings", open: false }); }} />)}
       {state.pluginsOpen && <PluginsPanel />}
+      {state.codeEditor && <CodeEditorPanel />}
     </div>
   );
 }

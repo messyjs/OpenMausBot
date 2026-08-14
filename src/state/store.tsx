@@ -156,6 +156,8 @@ interface AppState {
   splitPosition: number;
   /** Secondary session (bottom pane) */
   secondarySession: { botId: string; sessionId: string } | null;
+  /** Code editor panel state */
+  codeEditor: { content: string; lang: string; botId: string } | null;
   settingsUnlocked: boolean;
   /** Starred/favorite model IDs (instanceId:model format) */
   favoriteModels: string[];
@@ -207,6 +209,9 @@ type Action =
   | { type: "deleteSession"; botId: string; sessionId: string }
   | { type: "setSplitPosition"; position: number }
   | { type: "setSecondarySession"; session: { botId: string; sessionId: string } | null }
+  | { type: "openCodeEditor"; code: { content: string; lang: string; botId: string } }
+  | { type: "closeCodeEditor" }
+  | { type: "updateCodeEditor"; content: string }
   | { type: "setFavorites"; favorites: string[] }
   | { type: "unlockSettings"; on: boolean }
   | { type: "toggleFavoriteModel"; modelKey: string }
@@ -433,6 +438,12 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, splitPosition: action.position };
     case "setSecondarySession":
       return { ...state, secondarySession: action.session };
+    case "openCodeEditor":
+      return { ...state, codeEditor: action.code };
+    case "closeCodeEditor":
+      return { ...state, codeEditor: null };
+    case "updateCodeEditor":
+      return { ...state, codeEditor: state.codeEditor ? { ...state.codeEditor, content: action.content } : null };
     case "setFavorites":
       return { ...state, favoriteModels: action.favorites };
     case "unlockSettings":
@@ -486,6 +497,7 @@ const initialState: AppState = {
   collapsedBots: {},
   splitPosition: 50,
   secondarySession: null,
+  codeEditor: null,
   settingsUnlocked: false,
   favoriteModels: [],
   error: null,

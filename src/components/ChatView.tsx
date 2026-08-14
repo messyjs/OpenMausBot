@@ -1,5 +1,5 @@
-import { useEffect, useRef } from "react";
-import { Check, Loader2, Monitor, Square, X } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Check, Loader2, Monitor, Square, X, PanelRightOpen } from "lucide-react";
 import { useStore, formatTime, type Bot, type Message } from "@/state/store";
 import { MausAvatar } from "./Avatar";
 import { expressionForBot } from "@/lib/mascot";
@@ -34,44 +34,52 @@ function inlineMd(text: string, keyBase: string): React.ReactNode[] {
   return parts;
 }
 
-function Markdownish({ text }: { text: string }) {
+function CodeBlock({ code, lang, botId }: { code: string; lang?: string; botId: string }) {
+  const { dispatch } = useStore();
+  const [copied, setCopied] = useState(false);
+  const copy = () => { navigator.clipboard?.writeText(code); setCopied(true); setTimeout(() => setCopied(false), 2000); };
   return (
-    <>
-      {text.split("\n").map((line, i) => {
-        const heading = line.match(/^#{1,4}\s+(.*)$/);
-        if (heading) {
-          return (
-            <div key={i} className="mt-1.5 font-semibold">
-              {inlineMd(heading[1], `h${i}`)}
-            </div>
-          );
-        }
-        const bullet = line.match(/^\s*[-•*]\s+(.*)$/);
-        if (bullet) {
-          return (
-            <div key={i} className="flex gap-2 pl-1">
-              <span className="text-ink-secondary">•</span>
-              <span className="min-w-0">{inlineMd(bullet[1], `b${i}`)}</span>
-            </div>
-          );
-        }
-        const numbered = line.match(/^\s*(\d+)\.\s+(.*)$/);
-        if (numbered) {
-          return (
-            <div key={i} className="flex gap-2 pl-1">
-              <span className="text-ink-secondary">{numbered[1]}.</span>
-              <span className="min-w-0">{inlineMd(numbered[2], `n${i}`)}</span>
-            </div>
-          );
-        }
-        if (!line.trim()) return <div key={i} className="h-2.5" />;
-        return <div key={i}>{inlineMd(line, `p${i}`)}</div>;
-      })}
-    </>
+    <div className="my-2 overflow-hidden rounded-lg border border-hairline/40 bg-inset">
+      <div className="flex items-center justify-between border-b border-hairline/30 px-3 py-1.5">
+        <span className="text-[11px] font-medium uppercase text-ink-secondary">{lang || "code"}</span>
+        <div className="flex gap-2">
+          <button onClick={() => dispatch({ type: "openCodeEditor", code: { content: code, lang: lang || "code", botId } })} className="flex items-center gap-1 text-[11px] text-ink-secondary hover:text-accent" title="Open in side editor">
+            <PanelRightOpen size={11} /> Edit
+          </button>
+          <button onClick={copy} className="text-[11px] text-ink-secondary hover:text-ink">{copied ? "Copied!" : "Copy"}</button>
+        </div>
+      </div>
+      <pre className="overflow-x-auto p-3 text-[12px] leading-relaxed"><code className="font-mono text-ink">{code}</code></pre>
+    </div>
   );
 }
 
-function Bubble({ message }: { message: Message }) {
+function Markdownish({ text, botId }: { text: string; botId?: string }) {
+  const parts: React.ReactNode[] = [];
+  const tcS = String.fromCharCode(96).repeat(3);
+  const nl = String.fromCharCode(10);
+  const bs = String.fromCharCode(92);
+  const codeRe = new RegExp(tcS + "(" + bs + bs + "w*)" + nl + "(" + bs + bs + "s" + bs + bs + "S*?)" + tcS, "g");
+  let last = 0; let m: RegExpExecArray | null; let ki = 0;
+  const rl = (line: string, key: string) => {
+    const h = line.match(/^#{1,4}\s+(.*)$/);
+    if (h) return <div key={key} className="mt-1.5 font-semibold">{inlineMd(h[1], key)}</div>;
+    const b = line.match(/^\s*[-*]\s+(.*)$/);
+    if (b) return <div key={key} className="flex gap-2 pl-1"><span className="text-ink-secondary">-</span><span className="min-w-0">{inlineMd(b[1], key)}</span></div>;
+    const n = line.match(/^\s*(\d+)\.\s+(.*)$/);
+    if (n) return <div key={key} className="flex gap-2 pl-1"><span className="text-ink-secondary">{n[1]}.</span><span className="min-w-0">{inlineMd(n[2], key)}</span></div>;
+    if (!line.trim()) return <div key={key} className="h-2.5" />;
+    return <div key={key}>{inlineMd(line, key)}</div>;
+  };
+  while ((m = codeRe.exec(text))) {
+    if (m.index > last) text.slice(last, m.index).split(nl).forEach((l) => parts.push(rl(l, "t" + ki++)));
+    parts.push(<CodeBlock key={"c" + ki++} code={m[2]} lang={m[1]} botId={botId || ""} />);
+    last = m.index + m[0].length;
+  }
+  if (last < text.length) text.slice(last).split(nl).forEach((l) => parts.push(rl(l, "t" + ki++)));
+  return <>{parts}</>;
+}
+function Bubble({ message, botId }: { message: Message; botId?: string }) {
   const user = message.role === "user";
   return (
     <div className={cn("flex w-full", user ? "justify-end" : "justify-start")}>
@@ -81,7 +89,7 @@ function Bubble({ message }: { message: Message }) {
           user ? "whitespace-pre-wrap bg-bubble-user text-ink" : "bg-card text-ink",
         )}
       >
-        {user ? message.text : <Markdownish text={message.text ?? ""} />}
+        {user ? message.text : <Markdownish text={message.text ?? ""} botId={botId} />}
       </div>
     </div>
   );
@@ -125,11 +133,11 @@ function ScreenFrame({ png, mime }: { png: string; mime?: string }) {
   );
 }
 
-function StreamingBubble({ text }: { text: string }) {
+function StreamingBubble({ text, botId }: { text: string; botId?: string }) {
   return (
     <div className="flex w-full justify-start">
       <div className="max-w-[70%] rounded-2xl bg-card px-4 py-2.5 text-[15px] leading-relaxed text-ink">
-        <Markdownish text={text} />
+        <Markdownish text={text} botId={botId} />
         <span className="ml-0.5 inline-block h-[14px] w-[2px] animate-pulse bg-ink-secondary align-middle" />
       </div>
     </div>
@@ -227,7 +235,7 @@ export function ChatView({ bot, isSecondary }: { bot: Bot; isSecondary?: boolean
               case "screen":
                 return m.png ? <ScreenFrame key={m.id} png={m.png} mime={m.mime} /> : null;
               default:
-                return <Bubble key={m.id} message={m} />;
+                return <Bubble key={m.id} message={m} botId={bot.id} />;
             }
           })}
           {provisioning && (
@@ -239,7 +247,7 @@ export function ChatView({ bot, isSecondary }: { bot: Bot; isSecondary?: boolean
             </div>
           )}
           {streaming ? (
-            <StreamingBubble text={streaming} />
+            <StreamingBubble text={streaming} botId={bot.id} />
           ) : (
             bot.busy && (
               <div className="flex justify-start">

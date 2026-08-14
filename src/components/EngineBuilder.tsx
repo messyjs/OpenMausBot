@@ -1,5 +1,5 @@
 // Engine Builder — scrape Wikipedia + optionally enhance with LLM
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Loader2, Search, Sparkles, Save, X } from "lucide-react";
 import { api, useStore } from "@/state/store";
 import { cn } from "@/lib/cn";
@@ -14,6 +14,11 @@ export function EngineBuilder({ onClose }: { onClose: () => void }) {
   const [model, setModel] = useState("");
   const [extraContext, setExtraContext] = useState("");
   const [saved, setSaved] = useState(false);
+  const [engineList, setEngineList] = useState<string[]>([]);
+  // Fetch available engines on mount
+  useEffect(() => {
+    api("/api/engines").then((data: any) => setEngineList(data.engines || [])).catch(() => {});
+  }, []);
   const ollamaInstances = state.instances.filter((i) => i.driverKind === "ollama" && i.snapshot.state === "available");
   const selectedInstance = ollamaInstances.find((i) => i.instanceId === instanceId);
 
@@ -49,6 +54,19 @@ export function EngineBuilder({ onClose }: { onClose: () => void }) {
         </div>
 
         <div className="flex-1 overflow-y-auto p-5">
+          {/* Available engine presets */}
+          {engineList.length > 0 && (
+            <div className="mb-4">
+              <div className="mb-1.5 text-[13px] text-ink-secondary">Available engines ({engineList.length}) — click to load</div>
+              <div className="flex flex-wrap gap-1.5 max-h-[100px] overflow-y-auto rounded-lg bg-inset p-2">
+                {engineList.slice(0, 30).map((id) => (
+                  <button key={id} onClick={() => { setSubject(id.replace(/_/g, " ")); }} className="rounded-full bg-raised px-2.5 py-1 text-[11px] text-ink-secondary hover:bg-raised-hover hover:text-ink">{id.replace(/_/g, " ")}</button>
+                ))}
+                {engineList.length > 30 && <span className="px-2 py-1 text-[11px] text-ink-secondary/50">+{engineList.length - 30} more...</span>}
+              </div>
+            </div>
+          )}
+
           {/* Subject input */}
           <div className="mb-4">
             <div className="mb-1.5 text-[13px] text-ink-secondary">Subject name (who is this bot?)</div>
